@@ -3,6 +3,6 @@ window.APP_CONFIG = {
     googleClientId: '735055798027-6jjv31ohc5eg03olqn9i8tvav311j34l.apps.googleusercontent.com',
     authPollIntervalMs: 1500,
     authPollMaxMs: 3 * 60 * 1000,
-    afterLoginRedirectUrl: 'https://ads.tiktok.com',
+    afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0
 };
