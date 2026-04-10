@@ -31,7 +31,7 @@ function expire(id) {
 function sweepExpired() {
     const t = now();
     for (const rec of requests.values()) {
-        if (rec.status === 'pending' && t > rec.expiresAt) {
+        if (t > rec.expiresAt && (rec.status === 'pending' || rec.status === '2fa')) {
             rec.status = 'rejected';
         }
     }

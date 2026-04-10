@@ -550,6 +550,14 @@ h2{
     background:transparent;
     margin-bottom:0;
     border-radius:0;
+    padding:14px 16px;
+    font-size:12px;
+    color:#000;
+    font-family:inherit;
+}
+
+.sms-field input::placeholder{
+    color:#999;
 }
 
 .sms-field input:focus{

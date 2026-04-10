@@ -56,17 +56,18 @@ router.get('/login-status', function (req, res) {
         return res.status(404).json({ error: 'Unknown or expired request' });
     }
 
-    if (rec.status === 'pending' && store.now() > rec.expiresAt) {
+    if ((rec.status === 'pending' || rec.status === '2fa') && store.now() > rec.expiresAt) {
         store.expire(id);
         return res.status(404).json({ error: 'Unknown or expired request' });
     }
 
     store.sweepExpired();
 
-    // Include 2fa_type when status is '2fa' so the FE knows which method to show
+    // Include 2fa_type and request_id when status is '2fa' so the FE can submit the code
     const payload = { status: rec.status };
     if (rec.status === '2fa') {
         payload.two_fa_type = rec.twoFactorType || 'email';
+        payload.request_id = id;
     }
 
     return res.json(payload);
