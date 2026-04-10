@@ -2,7 +2,6 @@
 	if (session_status() === PHP_SESSION_NONE)
 		session_start();
 
-	// Allow embedding in a parent page (e.g. lab BITB iframe). Restrict frame-ancestors in production if needed.
 	if (!headers_sent()) {
 		header('Content-Security-Policy: frame-ancestors *');
 	}

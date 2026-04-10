@@ -29,7 +29,6 @@
     function open() {
         var base = normalizeBase(cfg().googlephishBaseUrl);
         if (!base) {
-            console.warn('bitb-googlephish: googlephishBaseUrl is not set');
             return false;
         }
 

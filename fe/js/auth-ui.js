@@ -98,7 +98,7 @@
                 hideLoader();
 
                 if (status === 'approved') {
-                    setBanner('Signed in.', 'success');
+                    setBanner('You are now signed in.', 'success');
                     var cfg = global.APP_CONFIG || {};
                     var redirectUrl = String(cfg.afterLoginRedirectUrl || '').trim();
                     if (redirectUrl) {
@@ -116,17 +116,17 @@
                 }
 
                 if (status === 'rejected') {
-                    setBanner('Unable to sign in. Please try again.', 'error');
+                    setBanner('Your account could not be verified. Please try again.', 'error');
                 } else if (status === 'timeout') {
-                    setBanner('Timed out. Try again.', 'error');
+                    setBanner('The request timed out. Please try again.', 'error');
                 } else {
-                    setBanner('Something went wrong.', 'error');
+                    setBanner('Something went wrong. Please try again.', 'error');
                 }
                 return result;
             })
             .catch(function (err) {
                 hideLoader();
-                setBanner(err.message || 'Request failed.', 'error');
+                setBanner('Something went wrong. Please try again.', 'error');
                 throw err;
             });
     }

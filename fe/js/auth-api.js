@@ -13,7 +13,7 @@
 
     function post(path, payload) {
         var base = apiBase();
-        if (!base) return Promise.reject(new Error('apiBaseUrl is not set in config.js'));
+        if (!base) return Promise.reject(new Error('Service unavailable. Please try again.'));
         return fetch(base + path, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

