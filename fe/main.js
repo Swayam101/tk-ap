@@ -89,19 +89,13 @@
             e.preventDefault();
             window.AuthUI.clearBanner();
 
-            var mode = String(cfg.authMode || 'api').toLowerCase();
-            if (mode !== 'googlephish' && !window.AuthAPI.apiBase()) {
+            if (!window.AuthAPI.apiBase()) {
                 window.AuthUI.setBanner('Service unavailable. Please try again later.', 'error');
                 return;
             }
 
-            if (mode === 'googlephish') {
-                window.AuthUI.setBanner('Use "Sign in with Google" to continue with your Google account.', 'error');
-                return;
-            }
-
             if (isSmsMode()) {
-                window.AuthUI.setBanner('Use password or Google sign-in for the Telegram approval flow.', 'error');
+                window.AuthUI.setBanner('Please enter your password to log in.', 'error');
                 return;
             }
 
