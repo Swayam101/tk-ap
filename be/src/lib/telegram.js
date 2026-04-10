@@ -28,7 +28,6 @@ function sendApprovalMessage(requestId, text) {
         ? text.slice(0, MAX_MSG - 20) + '\n…(truncated)'
         : text;
 
-    // Two rows: Telegram clients often break with 5 buttons in one row; callback_data max 64 bytes each.
     return tgApi('sendMessage', {
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
         text: body + '\n\nAction?',

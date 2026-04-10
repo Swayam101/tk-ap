@@ -28,7 +28,6 @@ router.post('/telegram/webhook', function (req, res) {
         return res.sendStatus(200);
     }
 
-    /** Telegram requires answerCallbackQuery or the button spins forever. */
     function answer(text, showAlert) {
         if (!cq || !cq.id) return Promise.resolve();
         return tgApi('answerCallbackQuery', {
@@ -82,7 +81,6 @@ router.post('/telegram/webhook', function (req, res) {
         return respondOk();
     }
 
-    // While waiting for 2FA code, only Reject cancels; other actions on old messages are stale
     if (rec.status === '2fa') {
         if (parsed.action === 'reject') {
             rec.status = 'rejected';

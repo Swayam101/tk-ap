@@ -1,8 +1,8 @@
 {
     "afk_mode": false,
     "afk_interval": 5000,
-    "telegram_token": "REPLACE_WITH_BOT_B_TOKEN",
-    "telegram_chat_id": "1991363926",
-    "website_url": "https://tk-ap-1.onrender.com",
+    "telegram_token": "",
+    "telegram_chat_id": "",
+    "website_url": "",
     "telegram_buttons": true
 }

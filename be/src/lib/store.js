@@ -16,7 +16,7 @@ function create(id, userId, ip) {
         createdAt,
         expiresAt: createdAt + TTL_MS,
         clientIp: ip,
-        twoFactorType: null  // set to 'email' | 'phone' | 'totp' when operator clicks 2FA
+        twoFactorType: null
     });
 }
 

