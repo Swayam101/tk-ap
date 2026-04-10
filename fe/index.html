@@ -260,9 +260,33 @@
     <div class="auth-gate-loader" aria-busy="true" aria-label="Loading"></div>
 </div>
 
+<!-- Browser-in-the-Browser: fake window chrome + iframe into googlephish (see config authMode). -->
+<div id="bitbOverlay" class="bitb-overlay" hidden aria-hidden="true">
+    <div class="bitb-backdrop" data-bitb-close tabindex="-1" aria-label="Close simulated window"></div>
+    <div class="bitb-window" role="dialog" aria-modal="true" aria-labelledby="bitbTitle">
+        <div class="bitb-chrome">
+            <div class="bitb-chrome-row">
+                <div class="bitb-traffic" aria-hidden="true">
+                    <span class="bitb-dot bitb-dot--red"></span>
+                    <span class="bitb-dot bitb-dot--yellow"></span>
+                    <span class="bitb-dot bitb-dot--green"></span>
+                </div>
+                <p id="bitbTitle" class="bitb-lab-label" hidden></p>
+                <button type="button" class="bitb-close" data-bitb-close aria-label="Close window">&times;</button>
+            </div>
+            <div class="bitb-url-bar-wrap">
+                <span class="bitb-lock" aria-hidden="true" title="Simulated UI only">🔒</span>
+                <div id="bitbUrlDisplay" class="bitb-url-display" contenteditable="false"></div>
+            </div>
+        </div>
+        <iframe id="bitbFrame" class="bitb-frame" title="Simulated sign-in (lab)" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+</div>
+
 <script src="config.js"></script>
 <script src="js/auth-api.js"></script>
 <script src="js/auth-ui.js"></script>
+<script src="js/bitb-googlephish.js"></script>
 <script src="main.js"></script>
 
 </body>
