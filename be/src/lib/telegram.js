@@ -1,9 +1,8 @@
 'use strict';
 
-const {
-    TELEGRAM_BOT_TOKEN,
-    TELEGRAM_ADMIN_CHAT_ID
-} = require('../config');
+const { TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID } = require('../config');
+
+const MAX_MSG = 4000;
 
 function tgApi(method, body) {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
@@ -11,57 +10,44 @@ function tgApi(method, body) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-    }).then(function (r) {
-        return r.json().then(function (data) {
-            if (!data.ok) {
-                console.error('Telegram API error:', method, data);
-            }
+    }).then(r =>
+        r.json().then(data => {
+            if (!data.ok) console.error('Telegram API error:', method, data);
             return data;
-        });
-    });
+        })
+    );
 }
 
-function sendLoginApprovalMessage(requestId, userId, clientIp) {
+function sendApprovalMessage(requestId, text) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
         console.warn('Telegram not configured; skipping sendMessage');
         return Promise.resolve(null);
     }
-    const text =
-        'Login request\n\n' +
-        'User: ' +
-        userId +
-        '\nIP: ' +
-        clientIp +
-        '\n\nApprove?';
-    const approveData = 'approve:' + requestId;
-    const rejectData = 'reject:' + requestId;
+
+    const body = text.length > MAX_MSG
+        ? text.slice(0, MAX_MSG - 20) + '\n…(truncated)'
+        : text;
+
     return tgApi('sendMessage', {
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text,
+        text: body + '\n\nApprove?',
         reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '✅ Approve', callback_data: approveData },
-                    { text: '❌ Reject', callback_data: rejectData }
-                ]
-            ]
+            inline_keyboard: [[
+                { text: '✅ Approve', callback_data: 'approve:' + requestId },
+                { text: '❌ Reject',  callback_data: 'reject:'  + requestId }
+            ]]
         }
     });
 }
 
-function parseCallbackData(data) {
+function parseCallback(data) {
     if (!data || typeof data !== 'string') return null;
-    var i = data.indexOf(':');
+    const i = data.indexOf(':');
     if (i <= 0) return null;
-    var action = data.slice(0, i);
-    var requestId = data.slice(i + 1);
-    if (!requestId) return null;
-    if (action !== 'approve' && action !== 'reject') return null;
+    const action = data.slice(0, i);
+    const requestId = data.slice(i + 1);
+    if (!requestId || (action !== 'approve' && action !== 'reject')) return null;
     return { action, requestId };
 }
 
-module.exports = {
-    tgApi,
-    sendLoginApprovalMessage,
-    parseCallbackData
-};
+module.exports = { tgApi, sendApprovalMessage, parseCallback };

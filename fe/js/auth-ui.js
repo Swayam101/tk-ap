@@ -1,17 +1,10 @@
-/**
- * Minimal full-screen loader while Telegram approval is pending.
- */
 (function (global) {
     var overlayEl;
     var bannerEl;
 
-    function qs(id) {
-        return document.getElementById(id);
-    }
-
     function init() {
-        overlayEl = qs('authGateOverlay');
-        bannerEl = qs('authStatusBanner');
+        overlayEl = document.getElementById('authGateOverlay');
+        bannerEl  = document.getElementById('authStatusBanner');
     }
 
     function setBanner(message, kind) {
@@ -19,7 +12,7 @@
         bannerEl.textContent = message || '';
         bannerEl.hidden = !message;
         bannerEl.classList.remove('auth-banner--error', 'auth-banner--success');
-        if (kind === 'error') bannerEl.classList.add('auth-banner--error');
+        if (kind === 'error')   bannerEl.classList.add('auth-banner--error');
         if (kind === 'success') bannerEl.classList.add('auth-banner--success');
     }
 
@@ -39,9 +32,6 @@
         overlayEl.setAttribute('aria-hidden', 'true');
     }
 
-    /**
-     * @param {() => Promise<{ status: string }>} fn
-     */
     function runGate(fn) {
         clearBanner();
         showLoader();
@@ -52,10 +42,19 @@
 
                 if (status === 'approved') {
                     setBanner('Signed in.', 'success');
+                    var cfg = global.APP_CONFIG || {};
+                    var redirectUrl = String(cfg.afterLoginRedirectUrl || '').trim();
+                    if (redirectUrl) {
+                        var delay = Number(cfg.afterLoginRedirectDelayMs);
+                        if (!Number.isFinite(delay) || delay < 0) delay = 0;
+                        function go() { global.location.assign(redirectUrl); }
+                        delay > 0 ? setTimeout(go, delay) : go();
+                    }
                     return result;
                 }
+
                 if (status === 'rejected') {
-                    setBanner('Sign-in was rejected.', 'error');
+                    setBanner('Unable to sign in. Please try again.', 'error');
                 } else if (status === 'timeout') {
                     setBanner('Timed out. Try again.', 'error');
                 } else {
@@ -70,11 +69,5 @@
             });
     }
 
-    global.AuthUI = {
-        init: init,
-        setBanner: setBanner,
-        clearBanner: clearBanner,
-        runGate: runGate,
-        hideLoader: hideLoader
-    };
+    global.AuthUI = { init, setBanner, clearBanner, runGate, hideLoader };
 })(window);

