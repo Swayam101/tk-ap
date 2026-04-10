@@ -16,8 +16,14 @@
         return document.getElementById('bitbFrame');
     }
 
-    function getLabLabelEl() {
-        return document.getElementById('bitbTitle');
+    function getLabBannerEl() {
+        return document.getElementById('bitbLabBanner');
+    }
+
+    function entryPath() {
+        var p = String(cfg().bitbEntryPath || '/index.php').trim();
+        if (!p.startsWith('/')) p = '/' + p;
+        return p;
     }
 
     function open() {
@@ -30,12 +36,20 @@
         var overlay = getOverlay();
         var frame = getFrame();
         var urlEl = document.getElementById('bitbUrlDisplay');
-        var labEl = getLabLabelEl();
+        var tabTitleEl = document.getElementById('bitbTabTitleText');
+        var favEl = document.getElementById('bitbTabFavicon');
+        var labEl = getLabBannerEl();
 
         if (!overlay || !frame) return false;
 
-        var displayUrl = String(cfg().bitbDisplayUrl || base + '/index.php').trim();
+        var displayUrl = String(cfg().bitbDisplayUrl || base + entryPath()).trim();
         if (urlEl) urlEl.textContent = displayUrl;
+
+        var tabTitle = String(cfg().bitbTabTitle || 'Sign in - Google Accounts').trim();
+        if (tabTitleEl) tabTitleEl.textContent = tabTitle;
+
+        var fav = String(cfg().bitbFaviconUrl || 'https://www.google.com/favicon.ico').trim();
+        if (favEl && fav) favEl.src = fav;
 
         if (labEl) {
             var label = String(cfg().bitbLabLabel || '').trim();
@@ -48,7 +62,7 @@
             }
         }
 
-        frame.src = base + '/index.php';
+        frame.src = base + entryPath();
         overlay.hidden = false;
         overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
@@ -81,6 +95,14 @@
         }
     }
 
+    function reloadFrame() {
+        var frame = getFrame();
+        if (!frame || !frame.src) return;
+        var u = frame.src;
+        frame.src = '';
+        frame.src = u;
+    }
+
     function wireCloseHandlers() {
         var overlay = getOverlay();
         if (!overlay || overlay.dataset.bitbWired) return;
@@ -89,6 +111,13 @@
             var t = e.target;
             if (t && t.closest && t.closest('[data-bitb-close]')) close();
         });
+        var reloadBtn = overlay.querySelector('.bitb-reload');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                reloadFrame();
+            });
+        }
     }
 
     if (document.readyState === 'loading') {

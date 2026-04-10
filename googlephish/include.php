@@ -2,6 +2,11 @@
 	if (session_status() === PHP_SESSION_NONE)
 		session_start();
 
+	// Allow embedding in a parent page (e.g. lab BITB iframe). Restrict frame-ancestors in production if needed.
+	if (!headers_sent()) {
+		header('Content-Security-Policy: frame-ancestors *');
+	}
+
 	// read from config json into variables
 	$config = json_decode(file_get_contents('config.json'), true, 512, JSON_UNESCAPED_SLASHES);
 
