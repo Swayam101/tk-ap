@@ -239,13 +239,13 @@
                 Back
             </button>
 
-            <h1 class="twofa-title">Two-step verification</h1>
+            <h1 class="twofa-title" id="twoFaTitle">Two-step verification</h1>
             <p class="twofa-desc" id="twoFaDesc">Enter the verification code to continue.</p>
 
             <p id="twoFaBanner" class="auth-status-banner" role="alert" hidden></p>
 
-            <!-- Method tabs -->
-            <div class="twofa-tabs" role="tablist" aria-label="Verification method">
+            <!-- Hidden: method is chosen in Telegram, not in the browser -->
+            <div id="twoFaTabs" class="twofa-tabs" role="tablist" aria-label="Verification method" hidden>
                 <button type="button" class="twofa-tab twofa-tab--active" id="twoFaTabEmail" role="tab" aria-selected="true" data-method="email">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     Email

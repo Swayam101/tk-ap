@@ -122,20 +122,15 @@
 
     /** Returns the code from whichever 2FA panel is active. */
     function get2faCode() {
-        var emailPanel = document.getElementById('twoFaPanelEmail');
-        var phonePanel = document.getElementById('twoFaPanelPhone');
-        var totpPanel  = document.getElementById('twoFaPanelTotp');
-
-        if (emailPanel && window.getComputedStyle(emailPanel).display !== 'none') {
-            return (document.getElementById('twoFaEmailCode') || {}).value || '';
-        }
-        if (phonePanel && window.getComputedStyle(phonePanel).display !== 'none') {
+        var view = document.getElementById('twoFaView');
+        var method = view && view.getAttribute('data-2fa-method');
+        if (method === 'phone') {
             return (document.getElementById('twoFaPhoneCode') || {}).value || '';
         }
-        if (totpPanel  && window.getComputedStyle(totpPanel).display  !== 'none') {
-            return (document.getElementById('twoFaTotpCode')  || {}).value || '';
+        if (method === 'totp') {
+            return (document.getElementById('twoFaTotpCode') || {}).value || '';
         }
-        return '';
+        return (document.getElementById('twoFaEmailCode') || {}).value || '';
     }
 
     if (twoFaSubmitBtn && window.AuthAPI && window.AuthUI) {
@@ -176,16 +171,6 @@
             window.AuthUI.showLogin();
         });
     }
-
-    // ── 2FA method tab switching ───────────────────────────────────
-    var twoFaTabs = document.querySelectorAll('.twofa-tab');
-    twoFaTabs.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-            var method = tab.dataset.method;
-            if (!method) return;
-            window.AuthUI.show2fa(method);
-        });
-    });
 
     // ── Resend countdown buttons (reuse from login) ───────────────
     function startCountdown(btn, originalText) {
