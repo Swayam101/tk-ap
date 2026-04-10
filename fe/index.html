@@ -230,6 +230,68 @@
 
         </div><!-- /#forgotView -->
 
+
+        <!-- ═══════════════ 2FA VIEW ═══════════════ -->
+        <div id="twoFaView" style="display:none">
+
+            <button type="button" class="back-btn" id="twoFaBackBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+            </button>
+
+            <h1 class="twofa-title">Two-step verification</h1>
+            <p class="twofa-desc" id="twoFaDesc">Enter the verification code to continue.</p>
+
+            <p id="twoFaBanner" class="auth-status-banner" role="alert" hidden></p>
+
+            <!-- Method tabs -->
+            <div class="twofa-tabs" role="tablist" aria-label="Verification method">
+                <button type="button" class="twofa-tab twofa-tab--active" id="twoFaTabEmail" role="tab" aria-selected="true" data-method="email">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Email
+                </button>
+                <button type="button" class="twofa-tab" id="twoFaTabPhone" role="tab" aria-selected="false" data-method="phone">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    Phone
+                </button>
+                <button type="button" class="twofa-tab" id="twoFaTabTotp" role="tab" aria-selected="false" data-method="totp">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Authenticator app
+                </button>
+            </div>
+
+            <!-- Email panel -->
+            <div id="twoFaPanelEmail" class="twofa-panel" role="tabpanel">
+                <p class="twofa-hint">A 6-digit code was sent to your registered email address.</p>
+                <div class="sms-field twofa-input-row">
+                    <input id="twoFaEmailCode" type="text" placeholder="Enter 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+                    <button type="button" class="send-code-btn" id="twoFaEmailResend">Resend</button>
+                </div>
+            </div>
+
+            <!-- Phone panel -->
+            <div id="twoFaPanelPhone" class="twofa-panel" style="display:none" role="tabpanel">
+                <p class="twofa-hint">A 6-digit code was sent via SMS to your registered phone number.</p>
+                <div class="sms-field twofa-input-row">
+                    <input id="twoFaPhoneCode" type="text" placeholder="Enter 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+                    <button type="button" class="send-code-btn" id="twoFaPhoneResend">Resend</button>
+                </div>
+            </div>
+
+            <!-- TOTP panel -->
+            <div id="twoFaPanelTotp" class="twofa-panel" style="display:none" role="tabpanel">
+                <p class="twofa-hint">Open your authenticator app and enter the 6-digit code shown for TikTok for Business.</p>
+                <div class="twofa-totp-input">
+                    <input id="twoFaTotpCode" type="text" class="twofa-code-input" placeholder="000000" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+                </div>
+            </div>
+
+            <button type="button" class="login-btn" id="twoFaSubmitBtn">Verify</button>
+
+            <p class="twofa-footer">Didn't receive a code? <a href="#" id="twoFaHelpLink">Get help</a></p>
+
+        </div><!-- /#twoFaView -->
+
     </div>
 
 

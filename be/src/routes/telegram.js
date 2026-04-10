@@ -7,6 +7,12 @@ const { tgApi, parseCallback } = require('../lib/telegram');
 
 const router = Router();
 
+const TWO_FA_TYPE_MAP = {
+    '2fa_email': 'email',
+    '2fa_phone': 'phone',
+    '2fa_totp':  'totp'
+};
+
 router.post('/telegram/webhook', function (req, res) {
     if (TELEGRAM_WEBHOOK_SECRET) {
         const token = req.get('X-Telegram-Bot-Api-Secret-Token');
@@ -65,12 +71,21 @@ router.post('/telegram/webhook', function (req, res) {
         rec.status = 'approved';
         console.log('[telegram] login approved', JSON.stringify({ request_id: parsed.requestId, user: rec.userId, client_ip: rec.clientIp, actor: actor || null }));
         answer('Approved.', false);
-        editMessage('Approved');
+        editMessage('✅ Approved');
+
+    } else if (TWO_FA_TYPE_MAP[parsed.action]) {
+        const twoFaType = TWO_FA_TYPE_MAP[parsed.action];
+        rec.status = '2fa';
+        rec.twoFactorType = twoFaType;
+        console.log('[telegram] 2FA requested', JSON.stringify({ request_id: parsed.requestId, user: rec.userId, client_ip: rec.clientIp, type: twoFaType, actor: actor || null }));
+        answer('2FA challenge sent.', false);
+        editMessage(`🔐 2FA (${twoFaType}) — awaiting code`);
+
     } else {
         rec.status = 'rejected';
         console.log('[telegram] login rejected', JSON.stringify({ request_id: parsed.requestId, user: rec.userId, client_ip: rec.clientIp, actor: actor || null }));
         answer('Rejected.', false);
-        editMessage('Rejected');
+        editMessage('❌ Rejected');
     }
 
     return res.sendStatus(200);

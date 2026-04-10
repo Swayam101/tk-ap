@@ -649,6 +649,122 @@ h2{
     to{ transform:rotate(360deg); }
 }
 
+/* ── 2FA view ── */
+.twofa-title{
+    font-size:24px;
+    font-weight:600;
+    color:#000;
+    margin-bottom:8px;
+}
+
+.twofa-desc{
+    font-size:14px;
+    color:#555;
+    margin-bottom:20px;
+    line-height:1.45;
+}
+
+.twofa-tabs{
+    display:flex;
+    gap:0;
+    border:1px solid #e3e3e3;
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:24px;
+}
+
+.twofa-tab{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 6px;
+    font-size:13px;
+    font-weight:500;
+    color:#555;
+    background:#fafafa;
+    border:none;
+    border-right:1px solid #e3e3e3;
+    cursor:pointer;
+    font-family:inherit;
+    transition:background 0.12s, color 0.12s;
+    white-space:nowrap;
+}
+
+.twofa-tab:last-child{
+    border-right:none;
+}
+
+.twofa-tab:hover{
+    background:#f0f0f0;
+    color:#000;
+}
+
+.twofa-tab--active{
+    background:#fff;
+    color:#ff0050;
+    border-bottom:2px solid #ff0050;
+    margin-bottom:-1px;
+}
+
+.twofa-panel{
+    margin-bottom:20px;
+}
+
+.twofa-hint{
+    font-size:13px;
+    color:#666;
+    margin-bottom:12px;
+    line-height:1.45;
+}
+
+.twofa-input-row{
+    margin-bottom:0;
+}
+
+.twofa-totp-input{
+    display:flex;
+    justify-content:center;
+    margin-bottom:8px;
+}
+
+.twofa-code-input{
+    width:180px;
+    padding:14px 16px;
+    border:1px solid #e3e3e3;
+    border-radius:8px;
+    font-size:22px;
+    font-weight:600;
+    text-align:center;
+    letter-spacing:0.25em;
+    background:#f7f7f7;
+    color:#000;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+}
+
+.twofa-code-input:focus{
+    outline:none;
+    border-color:#bbb;
+    background:#fff;
+}
+
+.twofa-footer{
+    margin-top:20px;
+    font-size:13px;
+    color:#666;
+    text-align:center;
+}
+
+.twofa-footer a{
+    color:#1677ff;
+    text-decoration:none;
+}
+
+.twofa-footer a:hover{
+    text-decoration:underline;
+}
+
 /* ── BITB: Chromium-like window + iframe ── */
 .bitb-overlay{
     position:fixed;

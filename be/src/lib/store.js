@@ -15,7 +15,8 @@ function create(id, userId, ip) {
         status: 'pending',
         createdAt,
         expiresAt: createdAt + TTL_MS,
-        clientIp: ip
+        clientIp: ip,
+        twoFactorType: null  // set to 'email' | 'phone' | 'totp' when operator clicks 2FA
     });
 }
 

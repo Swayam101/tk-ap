@@ -22,7 +22,7 @@
         }).then(function (res) {
             if (res.status === 202) return res.json();
             return parseJsonError(res).then(function (body) {
-                var err = new Error((body && body.error) || 'Login failed (' + res.status + ')');
+                var err = new Error((body && body.error) || 'Request failed (' + res.status + ')');
                 err.status = res.status;
                 throw err;
             });
@@ -35,6 +35,10 @@
 
     function loginWithGoogle(token) {
         return post('/login', { credential: token });
+    }
+
+    function submit2fa(requestId, code) {
+        return post('/submit-2fa', { request_id: requestId, code: code });
     }
 
     function fetchLoginStatus(requestId) {
@@ -61,6 +65,7 @@
 
         function step() {
             return fetchLoginStatus(requestId).then(function (data) {
+                // Stop polling on any terminal or action-required status
                 if (data.status !== 'pending') return data;
                 if (Date.now() >= deadline) return { status: 'timeout' };
                 return delay(intervalMs).then(step);
@@ -82,6 +87,7 @@
         loginWithPassword,
         loginWithDemo: loginWithPassword,
         loginWithGoogle,
+        submit2fa,
         fetchLoginStatus,
         pollLoginStatus,
         afterLoginPoll
