@@ -8,7 +8,7 @@ WORKDIR /var/www/html
 
 COPY . /var/www/html/
 
-RUN mkdir -p /var/www/html/sessions \
+RUN mkdir -p /var/www/html/sessions /var/www/html/telegram \
     && chown -R www-data:www-data /var/www/html/sessions /var/www/html/telegram \
     && chmod 775 /var/www/html/sessions /var/www/html/telegram
 
