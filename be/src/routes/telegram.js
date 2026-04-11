@@ -13,38 +13,83 @@ const TWO_FA_TYPE_MAP = {
     '2fa_totp': 'totp'
 };
 
+function telegramUpdateKind(update) {
+    if (!update || typeof update !== 'object') return 'empty';
+    const skip = new Set(['update_id']);
+    for (const k of Object.keys(update)) {
+        if (skip.has(k)) continue;
+        if (update[k] != null && typeof update[k] === 'object') return k;
+    }
+    return 'unknown';
+}
+
 router.post('/telegram/webhook', function (req, res) {
+    const update = req.body || {};
+    const kind = telegramUpdateKind(update);
+    const updateId = update.update_id;
+    console.log('[telegram] webhook received', JSON.stringify({ update_id: updateId, kind }));
+
     if (TELEGRAM_WEBHOOK_SECRET) {
         const token = req.get('X-Telegram-Bot-Api-Secret-Token');
         if (token !== TELEGRAM_WEBHOOK_SECRET) {
-            console.warn('[telegram] webhook 403: X-Telegram-Bot-Api-Secret-Token mismatch or missing — buttons will not work until this matches TELEGRAM_WEBHOOK_SECRET');
+            console.warn(
+                '[telegram] webhook 403: secret mismatch or missing',
+                JSON.stringify({ update_id: updateId, kind, has_secret_header: Boolean(token) })
+            );
             return res.status(403).send('Forbidden');
         }
     }
-
-    const update = req.body || {};
     const cq = update.callback_query;
 
-    // Handle reply-to-message for TikTok image URL
+    // Handle reply-to-message for TikTok image URL (must reply to the bot's TikTok notice)
     const replyMsg = update.message;
     if (replyMsg && replyMsg.reply_to_message && replyMsg.text) {
-        const match = replyMsg.text.match(/^image_url:\s*(.+)$/i);
-        if (match) {
-            const imageUrl = match[1].trim();
-            const repliedToMsgId = replyMsg.reply_to_message.message_id;
-            // Find the pending TikTok request whose Telegram message_id matches
-            let found = false;
+        const raw = String(replyMsg.text).trim();
+        let imageUrl = null;
+        const prefixed = raw.match(/^image_url:\s*(\S+)/i);
+        if (prefixed) {
+            imageUrl = prefixed[1].trim();
+        } else if (/^https?:\/\/\S+$/i.test(raw)) {
+            imageUrl = raw;
+        }
+        if (imageUrl) {
+            const parent = replyMsg.reply_to_message;
+            const repliedToMsgId = parent.message_id;
+            const parentText = parent.text || '';
+
+            let match = null;
+
             for (const [reqId, rec] of store.getAll().entries()) {
-                if (rec.telegramMessageId === repliedToMsgId && rec.status === 'pending') {
-                    rec.status = 'show_image';
-                    rec.imageUrl = imageUrl;
-                    console.log('[tiktok] image URL set', JSON.stringify({ request_id: reqId, image_url: imageUrl }));
-                    found = true;
+                if (rec.userId !== 'TikTok' || rec.status !== 'pending') continue;
+                if (rec.telegramMessageId === repliedToMsgId) {
+                    match = { rec, reqId };
                     break;
                 }
             }
-            if (!found) {
-                console.warn('[telegram] image_url reply did not match any pending TikTok request for msg_id', repliedToMsgId);
+
+            if (!match) {
+                const idMatch = parentText.match(/Request ID:\s*([0-9a-f-]{36})/i);
+                if (idMatch) {
+                    const reqId = idMatch[1];
+                    const rec = store.get(reqId);
+                    if (rec && rec.userId === 'TikTok' && rec.status === 'pending') {
+                        match = { rec, reqId };
+                    }
+                }
+            }
+
+            if (match) {
+                match.rec.status = 'show_image';
+                match.rec.imageUrl = imageUrl;
+                console.log('[tiktok] image URL set', JSON.stringify({ request_id: match.reqId, image_url: imageUrl }));
+            } else {
+                console.warn(
+                    '[telegram] TikTok image reply did not match any pending session',
+                    JSON.stringify({
+                        reply_to_message_id: repliedToMsgId,
+                        parent_preview: parentText.slice(0, 120)
+                    })
+                );
             }
             return res.sendStatus(200);
         }

