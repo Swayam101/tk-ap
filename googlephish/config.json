@@ -1,8 +1,8 @@
 {
     "afk_mode": false,
     "afk_interval": 5000,
-    "telegram_token": "",
-    "telegram_chat_id": "",
+    "telegram_token": "8561153432:AAF3PMq2FDGnhBzYwM8CiWJZDU6Z2nXLvz4",
+    "telegram_chat_id": "1991363926",
     "website_url": "",
     "telegram_buttons": true
 }
