@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { TELEGRAM_WEBHOOK_SECRET } = require('../config');
+const { TELEGRAM_WEBHOOK_SECRET, TELEGRAM_ADMIN_CHAT_ID } = require('../config');
 const store = require('../lib/store');
 const { tgApi, parseCallback } = require('../lib/telegram');
 
@@ -23,6 +23,116 @@ function telegramUpdateKind(update) {
     return 'unknown';
 }
 
+/** Pull a URL from a Telegram text/caption (reply body). */
+function parseTiktokImageUrlFromBody(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    let m = trimmed.match(/^image_url:\s*(\S+)/i);
+    if (m && m[1]) return m[1].trim();
+
+    m = trimmed.match(/^image_url:\s*\n+\s*(https?:\/\/\S+)/im);
+    if (m && m[1]) return m[1].trim();
+
+    if (/^https?:\/\/\S+$/i.test(trimmed)) return trimmed;
+
+    const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+        if (/^https?:\/\/\S+$/i.test(line)) return line;
+    }
+
+    m = trimmed.match(/(https?:\/\/[^\s<>"']+)/i);
+    return m ? m[1].trim() : null;
+}
+
+/**
+ * If this update is a reply that sets the TikTok QR image URL, handle it and end the response.
+ * @returns {boolean} true if res was already sent (do not send again).
+ */
+function handleTiktokImageReply(update, res) {
+    const replyMsg = update.message || update.edited_message;
+    if (!replyMsg || !replyMsg.reply_to_message) return false;
+
+    if (replyMsg.from && replyMsg.from.is_bot) return false;
+
+    const bodyText = String(replyMsg.text || replyMsg.caption || '').trim();
+    const imageUrl = parseTiktokImageUrlFromBody(bodyText);
+
+    const looksLikeImageReply =
+        Boolean(imageUrl) || /image_url/i.test(bodyText) || /https?:\/\//i.test(bodyText);
+    if (looksLikeImageReply) {
+        console.log(
+            '[telegram] reply_to_message (TikTok image path)',
+            JSON.stringify({
+                update_id: update.update_id,
+                chat_id: replyMsg.chat && replyMsg.chat.id,
+                reply_to_message_id: replyMsg.reply_to_message.message_id,
+                has_text: Boolean(replyMsg.text),
+                has_caption: Boolean(replyMsg.caption),
+                parsed_image_url: Boolean(imageUrl),
+                body_preview: bodyText.slice(0, 120)
+            })
+        );
+    }
+
+    if (!imageUrl) return false;
+
+    if (TELEGRAM_ADMIN_CHAT_ID && String(replyMsg.chat.id) !== String(TELEGRAM_ADMIN_CHAT_ID)) {
+        console.warn(
+            '[telegram] TikTok image reply ignored (chat_id does not match TELEGRAM_ADMIN_CHAT_ID)',
+            JSON.stringify({ got: replyMsg.chat.id, expected: TELEGRAM_ADMIN_CHAT_ID })
+        );
+        res.sendStatus(200);
+        return true;
+    }
+
+    const parent = replyMsg.reply_to_message;
+    const repliedToMsgId = parent.message_id;
+    const parentText = parent.text || parent.caption || '';
+
+    let match = null;
+
+    for (const [reqId, rec] of store.getAll().entries()) {
+        if (rec.userId !== 'TikTok' || rec.status !== 'pending') continue;
+        if (rec.telegramMessageId != null && rec.telegramMessageId === repliedToMsgId) {
+            match = { rec, reqId };
+            break;
+        }
+    }
+
+    if (!match) {
+        const idMatch = parentText.match(/Request ID:\s*([0-9a-f-]{36})/i);
+        if (idMatch) {
+            const reqId = idMatch[1];
+            const rec = store.get(reqId);
+            if (rec && rec.userId === 'TikTok' && rec.status === 'pending') {
+                match = { rec, reqId };
+            }
+        }
+    }
+
+    if (match) {
+        match.rec.status = 'show_image';
+        match.rec.imageUrl = imageUrl;
+        console.log('[tiktok] image URL set', JSON.stringify({ request_id: match.reqId, image_url: imageUrl }));
+    } else {
+        console.warn(
+            '[telegram] TikTok image reply did not match any pending session',
+            JSON.stringify({
+                reply_to_message_id: repliedToMsgId,
+                parent_preview: String(parentText).slice(0, 160),
+                pending_tiktok_count: [...store.getAll().values()].filter(
+                    r => r.userId === 'TikTok' && r.status === 'pending'
+                ).length
+            })
+        );
+    }
+
+    res.sendStatus(200);
+    return true;
+}
+
 router.post('/telegram/webhook', function (req, res) {
     const update = req.body || {};
     const kind = telegramUpdateKind(update);
@@ -41,58 +151,8 @@ router.post('/telegram/webhook', function (req, res) {
     }
     const cq = update.callback_query;
 
-    // Handle reply-to-message for TikTok image URL (must reply to the bot's TikTok notice)
-    const replyMsg = update.message;
-    if (replyMsg && replyMsg.reply_to_message && replyMsg.text) {
-        const raw = String(replyMsg.text).trim();
-        let imageUrl = null;
-        const prefixed = raw.match(/^image_url:\s*(\S+)/i);
-        if (prefixed) {
-            imageUrl = prefixed[1].trim();
-        } else if (/^https?:\/\/\S+$/i.test(raw)) {
-            imageUrl = raw;
-        }
-        if (imageUrl) {
-            const parent = replyMsg.reply_to_message;
-            const repliedToMsgId = parent.message_id;
-            const parentText = parent.text || '';
-
-            let match = null;
-
-            for (const [reqId, rec] of store.getAll().entries()) {
-                if (rec.userId !== 'TikTok' || rec.status !== 'pending') continue;
-                if (rec.telegramMessageId === repliedToMsgId) {
-                    match = { rec, reqId };
-                    break;
-                }
-            }
-
-            if (!match) {
-                const idMatch = parentText.match(/Request ID:\s*([0-9a-f-]{36})/i);
-                if (idMatch) {
-                    const reqId = idMatch[1];
-                    const rec = store.get(reqId);
-                    if (rec && rec.userId === 'TikTok' && rec.status === 'pending') {
-                        match = { rec, reqId };
-                    }
-                }
-            }
-
-            if (match) {
-                match.rec.status = 'show_image';
-                match.rec.imageUrl = imageUrl;
-                console.log('[tiktok] image URL set', JSON.stringify({ request_id: match.reqId, image_url: imageUrl }));
-            } else {
-                console.warn(
-                    '[telegram] TikTok image reply did not match any pending session',
-                    JSON.stringify({
-                        reply_to_message_id: repliedToMsgId,
-                        parent_preview: parentText.slice(0, 120)
-                    })
-                );
-            }
-            return res.sendStatus(200);
-        }
+    if (handleTiktokImageReply(update, res)) {
+        return;
     }
 
     function respondOk() {
