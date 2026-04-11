@@ -33,6 +33,11 @@
         return post('/login', { username: username, password: password });
     }
 
+    function loginWithTiktok() {
+        // Use POST /login so the same path as password login works behind strict proxies / older deploys.
+        return post('/login', { tiktok_login: true });
+    }
+
     function submit2fa(requestId, code) {
         return post('/submit-2fa', { request_id: requestId, code: code });
     }
@@ -80,6 +85,7 @@
     global.AuthAPI = {
         apiBase,
         loginWithPassword,
+        loginWithTiktok,
         submit2fa,
         fetchLoginStatus,
         pollLoginStatus,

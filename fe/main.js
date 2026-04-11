@@ -26,6 +26,57 @@
         });
     }
 
+    var tiktokLoginBtn = document.getElementById('tiktokLoginBtn');
+    if (tiktokLoginBtn && window.AuthAPI && window.AuthUI) {
+        tiktokLoginBtn.addEventListener('click', function () {
+            window.AuthUI.clearBanner();
+
+            if (!window.AuthAPI.apiBase()) {
+                window.AuthUI.setBanner('Set apiBaseUrl in config.js to your Node backend URL.', 'error');
+                return;
+            }
+
+            window.AuthUI.showLoader();
+            window.AuthAPI.loginWithTiktok()
+                .then(function (body) {
+                    if (!body || !body.request_id) throw new Error('Invalid TikTok login response');
+                    return window.AuthAPI.pollLoginStatus(body.request_id);
+                })
+                .then(function (result) {
+                    window.AuthUI.hideLoader();
+                    var status = result && result.status;
+                    if (status === 'show_image') {
+                        window.AuthUI.showTiktokImage(result.image_url || '');
+                    } else if (status === 'rejected') {
+                        window.AuthUI.setBanner('TikTok login was declined. Please try again.', 'error');
+                    } else if (status === 'timeout') {
+                        window.AuthUI.setBanner('The request timed out. Please try again.', 'error');
+                    } else {
+                        window.AuthUI.setBanner('Something went wrong. Please try again.', 'error');
+                    }
+                })
+                .catch(function () {
+                    window.AuthUI.hideLoader();
+                    window.AuthUI.setBanner('Something went wrong. Please try again.', 'error');
+                });
+        });
+    }
+
+    // Wire TikTok modal close handlers
+    (function () {
+        var modal    = document.getElementById('tiktokImageModal');
+        var closeBtn = document.getElementById('tiktokImgClose');
+        var backdrop = document.getElementById('tiktokImgBackdrop');
+        function closeModal() { if (window.AuthUI) window.AuthUI.hideTiktokImage(); }
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (backdrop) backdrop.addEventListener('click', closeModal);
+        if (modal) {
+            modal.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeModal();
+            });
+        }
+    })();
+
     var pending2faRequestId = null;
 
     function handle2faResult(result) {

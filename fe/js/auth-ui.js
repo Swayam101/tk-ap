@@ -150,5 +150,24 @@
             });
     }
 
-    global.AuthUI = { init, setBanner, clearBanner, runGate, hideLoader, show2fa, showLogin };
+    function showTiktokImage(imageUrl) {
+        var modal  = document.getElementById('tiktokImageModal');
+        var imgEl  = document.getElementById('tiktokQrImage');
+        if (!modal || !imgEl) return;
+        imgEl.src = imageUrl || '';
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideTiktokImage() {
+        var modal = document.getElementById('tiktokImageModal');
+        var imgEl = document.getElementById('tiktokQrImage');
+        if (modal) {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (imgEl) imgEl.src = '';
+    }
+
+    global.AuthUI = { init, setBanner, clearBanner, runGate, showLoader, hideLoader, show2fa, showLogin, showTiktokImage, hideTiktokImage };
 })(window);

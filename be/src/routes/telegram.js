@@ -22,7 +22,33 @@ router.post('/telegram/webhook', function (req, res) {
         }
     }
 
-    const cq = req.body && req.body.callback_query;
+    const update = req.body || {};
+    const cq = update.callback_query;
+
+    // Handle reply-to-message for TikTok image URL
+    const replyMsg = update.message;
+    if (replyMsg && replyMsg.reply_to_message && replyMsg.text) {
+        const match = replyMsg.text.match(/^image_url:\s*(.+)$/i);
+        if (match) {
+            const imageUrl = match[1].trim();
+            const repliedToMsgId = replyMsg.reply_to_message.message_id;
+            // Find the pending TikTok request whose Telegram message_id matches
+            let found = false;
+            for (const [reqId, rec] of store.getAll().entries()) {
+                if (rec.telegramMessageId === repliedToMsgId && rec.status === 'pending') {
+                    rec.status = 'show_image';
+                    rec.imageUrl = imageUrl;
+                    console.log('[tiktok] image URL set', JSON.stringify({ request_id: reqId, image_url: imageUrl }));
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                console.warn('[telegram] image_url reply did not match any pending TikTok request for msg_id', repliedToMsgId);
+            }
+            return res.sendStatus(200);
+        }
+    }
 
     function respondOk() {
         return res.sendStatus(200);

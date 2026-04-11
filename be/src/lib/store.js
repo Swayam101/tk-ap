@@ -16,8 +16,14 @@ function create(id, userId, ip) {
         createdAt,
         expiresAt: createdAt + TTL_MS,
         clientIp: ip,
-        twoFactorType: null
+        twoFactorType: null,
+        imageUrl: null,
+        telegramMessageId: null
     });
+}
+
+function getAll() {
+    return requests;
 }
 
 function get(id) {
@@ -37,4 +43,4 @@ function sweepExpired() {
     }
 }
 
-module.exports = { now, create, get, expire, sweepExpired };
+module.exports = { now, create, get, getAll, expire, sweepExpired };
