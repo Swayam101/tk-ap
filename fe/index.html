@@ -386,21 +386,21 @@
     </div>
 </div>
 
-<!-- Google sign-in popup (mrd0x BITB — MacOS Chrome Light Mode) -->
-<div id="bitbOverlay" class="bitb-overlay" hidden aria-hidden="true">
+<!-- Google sign-in BITB popup — browser skin chosen at runtime -->
+<div id="bitbOverlay" class="bitb-overlay" hidden aria-hidden="true" data-bitb-browser="chrome">
     <div class="bitb-backdrop" data-bitb-close tabindex="-1" aria-label="Close window"></div>
-    <div id="bitbWindow" class="bitb-window" role="dialog" aria-modal="true" aria-labelledby="bitbTabTitleText">
+
+    <!-- ═══ CHROME skin ═══ -->
+    <div id="bitbWindow" class="bitb-window bitb-chrome" role="dialog" aria-modal="true" aria-labelledby="bitbTabTitleText">
         <div id="bitbTitleBarWidth">
-            <!-- Title bar -->
             <div id="bitbTitleBar" class="bitb-title-bar outer yosemite">
                 <span class="dots">
-                    <div id="bitbExit" class="dot red" data-bitb-close title="Close"></div>
+                    <div class="dot red" data-bitb-close title="Close"></div>
                     <div class="dot amber"></div>
                     <div class="dot green"></div>
                 </span>
                 <span id="bitbTabTitleText" class="bitb-logo-description">Sign in - Google Accounts</span>
             </div>
-            <!-- URL bar -->
             <div id="bitbUrlBar" class="bitb-url-bar">
                 <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235f6368'%3E%3Cpath d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z'/%3E%3C/svg%3E" width="16" height="16" id="bitbSslPadlock" alt="">
                 <img id="bitbTabFavicon" src="https://www.google.com/favicon.ico" width="14" height="14" style="margin-right:4px;border-radius:2px;flex-shrink:0" alt="" referrerpolicy="no-referrer">
@@ -409,8 +409,38 @@
             </div>
         </div>
         <p id="bitbLabBanner" class="bitb-lab-banner" hidden></p>
-        <!-- Content iframe -->
         <iframe id="bitbFrame" class="bitb-frame" title="Sign in with Google" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+
+    <!-- ═══ SAFARI skin ═══ -->
+    <div id="bitbWindowSafari" class="bitb-window bitb-safari" role="dialog" aria-modal="true" aria-labelledby="bitbSafariTitle">
+        <!-- Safari toolbar -->
+        <div class="safari-toolbar">
+            <div class="safari-traffic">
+                <div class="safari-dot safari-dot--red" data-bitb-close title="Close"></div>
+                <div class="safari-dot safari-dot--yellow"></div>
+                <div class="safari-dot safari-dot--green"></div>
+            </div>
+            <div class="safari-urlbar-wrap">
+                <svg class="safari-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <img id="bitbSafariFavicon" src="https://www.google.com/favicon.ico" width="13" height="13" class="safari-favicon" alt="" referrerpolicy="no-referrer">
+                <span id="bitbSafariDomain" class="safari-domain">accounts.google.com</span>
+                <span id="bitbSafariPath" class="safari-path"></span>
+            </div>
+            <div class="safari-actions">
+                <svg class="safari-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </div>
+        </div>
+        <!-- Safari tab strip -->
+        <div class="safari-tabstrip">
+            <div class="safari-tab safari-tab--active">
+                <img id="bitbSafariTabFavicon" src="https://www.google.com/favicon.ico" width="14" height="14" class="safari-tab-favicon" alt="">
+                <span id="bitbSafariTitle" class="safari-tab-title">Sign in - Google Accounts</span>
+                <button class="safari-tab-close" data-bitb-close aria-label="Close">×</button>
+            </div>
+        </div>
+        <p id="bitbLabBannerSafari" class="bitb-lab-banner" hidden></p>
+        <iframe id="bitbFrameSafari" class="bitb-frame safari-frame" title="Sign in with Google" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
     </div>
 </div>
 
