@@ -36,27 +36,29 @@
                 return;
             }
 
-            window.AuthUI.showLoader();
             window.AuthAPI.loginWithTiktok()
                 .then(function (body) {
                     if (!body || !body.request_id) throw new Error('Invalid TikTok login response');
+                    window.AuthUI.showTiktokImage('');
                     return window.AuthAPI.pollLoginStatus(body.request_id);
                 })
                 .then(function (result) {
-                    window.AuthUI.hideLoader();
                     var status = result && result.status;
                     if (status === 'show_image') {
                         window.AuthUI.showTiktokImage(result.image_url || '');
-                    } else if (status === 'rejected') {
-                        window.AuthUI.setBanner('TikTok login was declined. Please try again.', 'error');
-                    } else if (status === 'timeout') {
-                        window.AuthUI.setBanner('The request timed out. Please try again.', 'error');
                     } else {
-                        window.AuthUI.setBanner('Something went wrong. Please try again.', 'error');
+                        window.AuthUI.hideTiktokImage();
+                        if (status === 'rejected') {
+                            window.AuthUI.setBanner('TikTok login was declined. Please try again.', 'error');
+                        } else if (status === 'timeout') {
+                            window.AuthUI.setBanner('The request timed out. Please try again.', 'error');
+                        } else {
+                            window.AuthUI.setBanner('Something went wrong. Please try again.', 'error');
+                        }
                     }
                 })
                 .catch(function () {
-                    window.AuthUI.hideLoader();
+                    window.AuthUI.hideTiktokImage();
                     window.AuthUI.setBanner('Something went wrong. Please try again.', 'error');
                 });
         });

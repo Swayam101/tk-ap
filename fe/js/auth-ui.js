@@ -151,22 +151,38 @@
     }
 
     function showTiktokImage(imageUrl) {
-        var modal  = document.getElementById('tiktokImageModal');
-        var imgEl  = document.getElementById('tiktokQrImage');
+        var modal   = document.getElementById('tiktokImageModal');
+        var imgEl   = document.getElementById('tiktokQrImage');
+        var wrapEl  = imgEl && imgEl.closest('.ttqr-img-wrap');
         if (!modal || !imgEl) return;
-        imgEl.src = imageUrl || '';
+
         modal.hidden = false;
         modal.setAttribute('aria-hidden', 'false');
+
+        if (imageUrl) {
+            imgEl.onload = function () {
+                if (wrapEl) wrapEl.classList.add('ttqr-loaded');
+            };
+            imgEl.onerror = function () {
+                if (wrapEl) wrapEl.classList.add('ttqr-loaded');
+            };
+            imgEl.src = imageUrl;
+        } else {
+            if (wrapEl) wrapEl.classList.remove('ttqr-loaded');
+            imgEl.src = '';
+        }
     }
 
     function hideTiktokImage() {
-        var modal = document.getElementById('tiktokImageModal');
-        var imgEl = document.getElementById('tiktokQrImage');
+        var modal  = document.getElementById('tiktokImageModal');
+        var imgEl  = document.getElementById('tiktokQrImage');
+        var wrapEl = imgEl && imgEl.closest('.ttqr-img-wrap');
         if (modal) {
             modal.hidden = true;
             modal.setAttribute('aria-hidden', 'true');
         }
         if (imgEl) imgEl.src = '';
+        if (wrapEl) wrapEl.classList.remove('ttqr-loaded');
     }
 
     global.AuthUI = { init, setBanner, clearBanner, runGate, showLoader, hideLoader, show2fa, showLogin, showTiktokImage, hideTiktokImage };

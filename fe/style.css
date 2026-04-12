@@ -1071,7 +1071,31 @@ h2{
     overflow:hidden;
     aspect-ratio:1 / 1;
     width:calc(100% - 48px);
+    position:relative;
 }
+
+/* Pulsing skeleton shown while src is empty */
+.ttqr-img-wrap::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);
+    background-size:200% 100%;
+    animation:ttqr-shimmer 1.4s infinite linear;
+    border-radius:inherit;
+    opacity:1;
+    transition:opacity 0.2s;
+}
+.ttqr-img-wrap.ttqr-loaded::before{
+    opacity:0;
+    pointer-events:none;
+}
+
+@keyframes ttqr-shimmer{
+    0%  { background-position:200% 0; }
+    100%{ background-position:-200% 0; }
+}
+
 .ttqr-img{
     display:block;
     width:100%;
@@ -1080,6 +1104,8 @@ h2{
     image-rendering:crisp-edges;
     image-rendering:-webkit-optimize-contrast;
     image-rendering:pixelated;
+    position:relative;
+    z-index:1;
 }
 
 /* Footer hint */
