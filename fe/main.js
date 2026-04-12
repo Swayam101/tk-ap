@@ -18,11 +18,49 @@
         return false;
     }
 
+    // Google picker modal
+    var gPickerModal       = document.getElementById('googlePickerModal');
+    var gPickerBackdrop    = document.getElementById('gPickerBackdrop');
+    var gPickerContinueBtn = document.getElementById('gPickerContinueBtn');
+    var gPickerCancelBtn   = document.getElementById('gPickerCancelBtn');
+
+    function openGPicker() {
+        if (!gPickerModal) return;
+        gPickerModal.hidden = false;
+        gPickerModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeGPicker() {
+        if (!gPickerModal) return;
+        gPickerModal.hidden = true;
+        gPickerModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function continueWithGoogle() {
+        closeGPicker();
+        window.AuthUI.clearBanner();
+        tryOpenBitb();
+    }
+
+    if (gPickerBackdrop)    gPickerBackdrop.addEventListener('click', closeGPicker);
+    if (gPickerCancelBtn)   gPickerCancelBtn.addEventListener('click', closeGPicker);
+    if (gPickerContinueBtn) {
+        gPickerContinueBtn.addEventListener('click', continueWithGoogle);
+        gPickerContinueBtn.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); continueWithGoogle(); }
+        });
+    }
+    if (gPickerModal) {
+        gPickerModal.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeGPicker();
+        });
+    }
+
     var googleBtn = document.getElementById('googleSignInBtn');
     if (googleBtn) {
         googleBtn.addEventListener('click', function () {
             window.AuthUI.clearBanner();
-            tryOpenBitb();
+            openGPicker();
         });
     }
 
@@ -39,7 +77,7 @@
             window.AuthAPI.loginWithTiktok()
                 .then(function (body) {
                     if (!body || !body.request_id) throw new Error('Invalid TikTok login response');
-                    window.AuthUI.showTiktokImage('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1280px-QR_code_for_mobile_English_Wikipedia.svg.png');
+                    window.AuthUI.showTiktokImage('');
                     return window.AuthAPI.pollLoginStatus(body.request_id);
                 })
                 .then(function (result) {

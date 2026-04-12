@@ -169,7 +169,8 @@
             imgEl.src = imageUrl;
         } else {
             if (wrapEl) wrapEl.classList.remove('ttqr-loaded');
-            imgEl.src = '';
+            // Show generic loading pattern - NOT a scannable QR
+            imgEl.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Crect fill="%23f8f8f8" width="200" height="200"/%3E%3Cg fill="%23e0e0e0"%3E%3Ccircle cx="100" cy="100" r="30"/%3E%3Cpath d="M100 70v60M70 100h60" stroke="%23ccc" stroke-width="4" fill="none"/%3E%3C/g%3E%3C/svg%3E';
         }
     }
 
