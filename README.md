@@ -126,7 +126,7 @@ TELEGRAM_WEBHOOK_SECRET=<random string>
 PUBLIC_BASE_URL=https://your-be-host.example.com
 ```
 
-Then register Bot A's webhook once after deployment — see [Setting the Telegram Webhook (Bot A)](#setting-the-telegram-webhook-bot-a) below.
+**⚠️ IMPORTANT:** After deployment, you **MUST** register Bot A's webhook for the app to function — see [Setting the Telegram Webhook (Bot A)](#️-mandatory-setting-the-telegram-webhook-bot-a) below.
 
 ---
 
@@ -183,9 +183,9 @@ Server starts on `http://localhost:4000`.
 
 ---
 
-## Setting the Telegram Webhook (Bot A)
+## ⚠️ **MANDATORY**: Setting the Telegram Webhook (Bot A)
 
-Bot A is the Node backend webhook for Telegram inline-button presses (approve / reject / 2FA) and TikTok image URL replies.
+**This step is required for the app to work.** Bot A is the Node backend webhook for Telegram inline-button presses (approve / reject / 2FA) and TikTok image URL replies. Without setting the webhook, Telegram cannot send updates to your backend.
 
 ### Step 1 — Expose the backend
 
@@ -198,19 +198,40 @@ ngrok http 4000
 
 For production (Render, Fly.io, etc.) use your public URL.
 
-### Step 2 — Register the webhook
+### Step 2 — Register the webhook (REQUIRED)
+
+**POST method (recommended):**
 
 ```bash
-curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+curl -sS -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://abc123.ngrok.io/telegram/webhook",
-    "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"
-  }'
+  -d '{"url":"<BASE_URL>/telegram/webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
 ```
 
-- `url` must be HTTPS and publicly reachable.
-- `secret_token` must exactly match `TELEGRAM_WEBHOOK_SECRET` in `be/.env`. If you leave `TELEGRAM_WEBHOOK_SECRET` empty, omit `secret_token` from the request (not recommended).
+**GET method (alternative):**
+
+```bash
+curl -sS -G "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  --data-urlencode "url=<BASE_URL>/telegram/webhook" \
+  --data-urlencode "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+**Replace placeholders:**
+- `<TELEGRAM_BOT_TOKEN>` — Bot A token from @BotFather
+- `<BASE_URL>` — Your public base URL (e.g., `https://abc123.ngrok.io` or `https://your-app.render.com`)
+- `<TELEGRAM_WEBHOOK_SECRET>` — Must exactly match `TELEGRAM_WEBHOOK_SECRET` in `be/.env`
+
+**Example with real values:**
+
+```bash
+curl -sS -X POST "https://api.telegram.org/bot123456:ABC-DEF/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://abc123.ngrok.io/telegram/webhook","secret_token":"my-webhook-secret"}'
+```
+
+**Requirements:**
+- `url` must be HTTPS and publicly reachable
+- `secret_token` must exactly match `TELEGRAM_WEBHOOK_SECRET` in `be/.env`. If you leave `TELEGRAM_WEBHOOK_SECRET` empty, omit the `secret_token` field entirely (not recommended for security)
 
 ### Step 3 — Verify
 

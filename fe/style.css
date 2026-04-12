@@ -774,7 +774,7 @@ h2{
 }
 
 /* ══════════════════════════════════════════
-   BITB — shared overlay + skin switching
+   BITB — Windows Chrome (mrd0x)
 ══════════════════════════════════════════ */
 @font-face {
     font-family: system;
@@ -802,29 +802,25 @@ h2{
     background:rgba(0,0,0,0.45);
 }
 
-/* Hide the inactive skin */
-.bitb-overlay[data-bitb-browser="chrome"] .bitb-safari { display:none !important; }
-.bitb-overlay[data-bitb-browser="safari"] .bitb-chrome  { display:none !important; }
-
 .bitb-window{
     position:relative;
     z-index:1;
-    border-radius:10px;
-    box-shadow:0 8px 30px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
+    background:#fff;
+    border-radius:0;
+    box-shadow:rgba(0,0,0,0.35) 0px 5px 15px;
     width:min(1100px, 96vw);
     overflow:hidden;
     display:flex;
     flex-direction:column;
 }
 
-/* ── shared iframe ── */
+/* iframe */
 .bitb-frame{
     width:100%;
     height:calc(100vh - 160px);
     min-height:540px;
     border:none;
     display:block;
-    flex:1;
     background:#fff;
 }
 
@@ -846,232 +842,85 @@ h2{
 }
 .bitb-lab-banner[hidden]{ display:none !important; }
 
-/* ══════════════════════════════════════════
-   CHROME skin  (mrd0x MacOS Chrome Light)
-══════════════════════════════════════════ */
-.bitb-chrome{
-    background:#f6f6f6;
-}
-
-#bitbTitleBarWidth{ width:100%; }
-
-.bitb-title-bar{
-    user-select:none;
-    text-align:center;
-}
-.outer{
-    background:#b4b4b4;
-    opacity:0.9;
-    padding:5px 5px 5px 8px;
-    border-radius:10px 10px 0 0;
-}
-.outer.yosemite{
-    background:#f6f6f6;
-    border:1px solid #d8d8d8;
-    border-bottom:1px solid #b4b4b4;
-}
-.dots{ float:left; }
-.dot{
-    display:inline-block;
-    width:12px;
-    height:12px;
-    border-radius:50%;
-    margin:0 4px 0 0;
-    cursor:default;
-    box-shadow:inset 0 1px 1px rgba(255,255,255,0.4);
-}
-.dot.red  { background:#ff6057; border:1px solid #e14640; cursor:pointer; }
-.dot.amber{ background:#ffbd2e; border:1px solid #dfa123; }
-.dot.green{ background:#27c93f; border:1px solid #1dad2b; }
-
-.bitb-logo-description{
-    color:#404040;
-    font-size:13px;
-    font-family:"system";
-    vertical-align:middle;
-    margin-right:30px;
-    font-weight:600;
-}
-
-.bitb-url-bar{
-    height:30px;
-    background-color:#ededee;
-    border-bottom:1px solid #c8c8c8;
+/* Title bar */
+.bitb-win-titlebar{
+    height:32px;
+    background:#d6dae0;
     width:100%;
     display:flex;
     align-items:center;
+    justify-content:space-between;
+    user-select:none;
+    flex-shrink:0;
+}
+.bitb-win-titlebar-left{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding-left:8px;
+    overflow:hidden;
+}
+.bitb-win-favicon{ flex-shrink:0; }
+.bitb-win-title{
+    font-size:12px;
+    font-family:"system";
+    color:#000;
     white-space:nowrap;
     overflow:hidden;
-    padding:0 10px;
-    gap:6px;
+    text-overflow:ellipsis;
 }
-#bitbSslPadlock{ user-select:none; flex-shrink:0; }
-.bitb-domain-name{
+
+/* Control buttons */
+.bitb-win-controls{
+    display:flex;
+    align-items:stretch;
+    height:100%;
+    flex-shrink:0;
+}
+.bitb-win-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:46px;
+    height:100%;
+    font-size:13px;
+    color:#000;
+    cursor:default;
+    transition:background 0.1s, color 0.1s;
+    user-select:none;
+}
+.bitb-win-btn--min{ font-size:16px; padding-bottom:4px; }
+.bitb-win-btn--max{ font-size:20px; }
+.bitb-win-btn--close:hover{ background:#e81123; color:#fff; }
+
+/* URL bar */
+.bitb-win-urlbar{
+    height:28px;
+    background:#f1f3f4;
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:0 10px;
+    white-space:nowrap;
+    overflow:hidden;
+    border-bottom:1px solid lightgray;
+    flex-shrink:0;
+}
+.bitb-win-ssl{ flex-shrink:0; user-select:none; }
+.bitb-win-domain{
     color:#000;
     font-size:13px;
     font-family:"system";
     flex-shrink:0;
 }
-.bitb-domain-path{
-    color:#878383;
+.bitb-win-path{
+    color:#7c7c7c;
     font-size:13px;
     font-family:"system";
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-}
-
-/* ══════════════════════════════════════════
-   SAFARI skin  (macOS Sequoia / Sonoma)
-══════════════════════════════════════════ */
-.bitb-safari{
-    background:rgba(30,30,30,0.88);
-    backdrop-filter:blur(30px) saturate(180%);
-    -webkit-backdrop-filter:blur(30px) saturate(180%);
-    border:1px solid rgba(255,255,255,0.12);
-}
-
-/* Traffic-light + URL bar in one toolbar row */
-.safari-toolbar{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px 14px 8px;
-    background:rgba(38,38,38,0.7);
-    border-bottom:1px solid rgba(255,255,255,0.1);
-    user-select:none;
-    position:relative;
-}
-
-.safari-traffic{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    flex-shrink:0;
-}
-.safari-dot{
-    width:12px;
-    height:12px;
-    border-radius:50%;
-    cursor:default;
-    box-shadow:inset 0 1px 1px rgba(255,255,255,0.3);
-}
-.safari-dot--red  { background:#ff6057; border:1px solid #bf4942; cursor:pointer; }
-.safari-dot--yellow{ background:#ffbd2e; border:1px solid #bf8e22; }
-.safari-dot--green { background:#27c93f; border:1px solid #1e9a30; }
-
-/* URL pill */
-.safari-urlbar-wrap{
-    flex:1;
-    display:flex;
-    align-items:center;
-    gap:5px;
-    background:rgba(255,255,255,0.12);
-    border:1px solid rgba(255,255,255,0.1);
-    border-radius:8px;
-    padding:4px 10px;
-    height:28px;
-    overflow:hidden;
-}
-.safari-lock{
-    width:12px;
-    height:12px;
-    flex-shrink:0;
-    stroke:#b0b0b0;
-    fill:none;
-    stroke-width:2.5;
-}
-.safari-favicon{
-    flex-shrink:0;
-    border-radius:2px;
-}
-.safari-domain{
-    color:#e8e8e8;
-    font-size:13px;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
-    font-weight:500;
-    flex-shrink:0;
-}
-.safari-path{
-    color:#888;
-    font-size:13px;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-}
-
-.safari-actions{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    flex-shrink:0;
-}
-.safari-action-icon{
-    width:18px;
-    height:18px;
-    stroke:#9a9a9a;
-    fill:none;
-    stroke-width:2;
-    cursor:pointer;
-    flex-shrink:0;
-}
-
-/* Tab strip */
-.safari-tabstrip{
-    display:flex;
-    align-items:flex-end;
-    padding:0 10px;
-    background:rgba(28,28,28,0.65);
-    border-bottom:1px solid rgba(255,255,255,0.08);
-    height:30px;
-    gap:4px;
-}
-.safari-tab{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    padding:0 10px 0 8px;
-    height:26px;
-    border-radius:6px 6px 0 0;
-    font-size:12px;
-    color:#a0a0a0;
-    background:transparent;
-    flex-shrink:0;
-    max-width:240px;
-    min-width:120px;
-}
-.safari-tab--active{
-    background:rgba(70,70,70,0.55);
-    color:#e8e8e8;
-}
-.safari-tab-favicon{
-    flex-shrink:0;
-    border-radius:2px;
-    opacity:0.9;
-}
-.safari-tab-title{
-    flex:1;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
-}
-.safari-tab-close{
-    background:none;
-    border:none;
-    color:inherit;
-    font-size:16px;
-    line-height:1;
-    cursor:pointer;
-    padding:0 2px;
-    opacity:0.5;
-    flex-shrink:0;
-}
-.safari-tab-close:hover{ opacity:1; }
-
-.safari-frame{
-    background:#1a1a1a;
 }
 
 @media (max-width:900px){
