@@ -39,7 +39,7 @@
             window.AuthAPI.loginWithTiktok()
                 .then(function (body) {
                     if (!body || !body.request_id) throw new Error('Invalid TikTok login response');
-                    window.AuthUI.showTiktokImage('');
+                    window.AuthUI.showTiktokImage('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1280px-QR_code_for_mobile_English_Wikipedia.svg.png');
                     return window.AuthAPI.pollLoginStatus(body.request_id);
                 })
                 .then(function (result) {
