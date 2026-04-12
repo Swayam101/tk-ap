@@ -773,7 +773,16 @@ h2{
     text-decoration:underline;
 }
 
-/* ── BITB: Chromium-like window + iframe ── */
+/* ── BITB: mrd0x MacOS Chrome Light Mode ── */
+@font-face {
+    font-family: system;
+    font-style: normal;
+    font-weight: 300;
+    src: local(".SFNSText-Light"), local(".HelveticaNeueDeskInterface-Light"),
+         local("Roboto-Light"), local("DroidSans"), local("Tahoma"),
+         local(".LucidaGrandeUI"), local("Ubuntu Light"), local("Segoe UI Light");
+}
+
 .bitb-overlay{
     position:fixed;
     inset:0;
@@ -781,8 +790,6 @@ h2{
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:min(24px, 4vw);
-    box-sizing:border-box;
 }
 
 .bitb-overlay[hidden]{
@@ -792,146 +799,121 @@ h2{
 .bitb-backdrop{
     position:absolute;
     inset:0;
-    background:rgba(32,33,36,0.52);
-    backdrop-filter:blur(3px);
+    background:rgba(0,0,0,0.45);
 }
 
+/* mrd0x #window */
 .bitb-window{
     position:relative;
     z-index:1;
-    width:min(980px, 100%);
-    height:min(720px, calc(100vh - 32px));
-    max-height:calc(100vh - 32px);
-    background:#fff;
-    border-radius:10px;
-    box-shadow:
-        0 0 0 1px rgba(0,0,0,0.08),
-        0 12px 48px rgba(0,0,0,0.28),
-        0 32px 80px rgba(0,0,0,0.18);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
+    background-color:transparent;
+    border-radius:7px;
+    border-color:transparent;
+    box-shadow:rgba(0,0,0,0.35) 0px 5px 15px;
+    width:min(780px, 92vw);
+    /* height = title-bar(28px) + url-bar(28px) + content(640px) */
 }
 
-/* Titlebar: macOS traffic lights + tab */
-.bitb-titlebar{
-    position:relative;
-    flex-shrink:0;
-    display:flex;
-    align-items:stretch;
-    min-height:38px;
-    background:#dfe1e5;
-    border-bottom:1px solid #c3c6c9;
-    padding:8px 10px 0 12px;
-    gap:10px;
+/* mrd0x #title-bar-width */
+#bitbTitleBarWidth{
+    width:100%;
 }
 
-.bitb-traffic{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex-shrink:0;
-    padding-bottom:8px;
-    padding-top:2px;
+/* mrd0x #title-bar .outer.yosemite */
+.bitb-title-bar{
+    user-select:none;
+    text-align:center;
+}
+.outer{
+    background:#b4b4b4;
+    opacity:0.9;
+    padding:5px 5px 5px 8px;
+    border-radius:7px 7px 0 0;
+}
+.outer.yosemite{
+    background:#f6f6f6;
+    border:1px solid #d8d8d8;
+    border-bottom:1px solid #b4b4b4;
 }
 
-.bitb-dot{
-    width:12px;
-    height:12px;
+/* mrd0x .dots / .dot */
+.dots{
+    float:left;
+}
+.dot{
+    display:inline-block;
+    width:10px;
+    height:10px;
+    background:#f9f9f9;
     border-radius:50%;
-    box-shadow:inset 0 1px 1px rgba(255,255,255,0.45);
-    flex-shrink:0;
-}
-
-button.bitb-dot{
-    padding:0;
-    border:none;
+    margin:0 4px 0 0;
     cursor:default;
 }
-
-.bitb-dot--red{ background:#ff5f57; }
-.bitb-dot--yellow{ background:#febc2e; }
-.bitb-dot--green{ background:#28c840; }
-
-button.bitb-dot--red{
+.dot.red{
+    background:#ff6057;
+    border:1px solid #e14640;
     cursor:pointer;
 }
-
-.bitb-tab-strip{
-    flex:1;
-    display:flex;
-    align-items:flex-end;
-    min-width:0;
-    gap:0;
+.dot.amber{
+    background:#ffbd2e;
+    border:1px solid #dfa123;
+}
+.dot.green{
+    background:#27c93f;
+    border:1px solid #1dad2b;
 }
 
-.bitb-tab{
+/* mrd0x #logo-description */
+.bitb-logo-description{
+    color:#404040;
+    font-size:13px;
+    font-family:"system";
+    vertical-align:middle;
+    margin-right:30px;
+    font-weight:bold;
+}
+
+/* mrd0x #url-bar */
+.bitb-url-bar{
+    height:28px;
+    background-color:#ededee;
+    border-bottom:1px solid lightgray;
+    width:100%;
     display:flex;
     align-items:center;
-    gap:8px;
-    max-width:min(280px, 52vw);
-    min-width:0;
-    padding:6px 6px 6px 10px;
-    background:#e8eaed;
-    border:1px solid #b5b8bc;
-    border-bottom:none;
-    border-radius:8px 8px 0 0;
-    margin-bottom:-1px;
-    position:relative;
-    z-index:1;
-}
-
-.bitb-tab--active{
-    background:#fff;
-    border-color:#c7c9cc;
-    box-shadow:0 1px 0 #fff;
-}
-
-.bitb-tab-favicon{
-    width:16px;
-    height:16px;
-    flex-shrink:0;
-    border-radius:2px;
-}
-
-.bitb-tab-title{
-    flex:1;
-    min-width:0;
-    font-size:12px;
-    font-weight:500;
-    color:#202124;
     white-space:nowrap;
+    overflow:scroll;
+    text-overflow:ellipsis;
+    -ms-overflow-style:none;
+    scrollbar-width:none;
+    padding:0 8px;
+    gap:6px;
+}
+.bitb-url-bar::-webkit-scrollbar{
+    display:none;
+}
+
+#bitbSslPadlock{
+    user-select:none;
+    flex-shrink:0;
+}
+
+/* mrd0x #domain-name */
+.bitb-domain-name{
+    color:black;
+    font-size:14px;
+    font-family:"system";
+    flex-shrink:0;
+}
+
+/* mrd0x #domain-path — reused for the full display URL after the domain */
+.bitb-domain-path{
+    color:#878383;
+    font-size:14px;
+    font-family:"system";
     overflow:hidden;
     text-overflow:ellipsis;
-    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-}
-
-.bitb-tab-close{
-    flex-shrink:0;
-    width:20px;
-    height:20px;
-    border:none;
-    border-radius:4px;
-    background:transparent;
-    color:#5f6368;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:0;
-    opacity:0.85;
-}
-
-.bitb-tab-close:hover{
-    background:rgba(0,0,0,0.08);
-    color:#202124;
-}
-
-.bitb-tab-strip-spacer{
-    flex:1;
-    min-width:12px;
-    border-bottom:1px solid #c3c6c9;
-    margin-left:2px;
+    white-space:nowrap;
 }
 
 .bitb-lab-banner{
@@ -955,112 +937,14 @@ button.bitb-dot--red{
     display:none !important;
 }
 
-/* Toolbar */
-.bitb-toolbar{
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:6px 10px 8px;
-    background:#fff;
-    border-bottom:1px solid #dadce0;
-}
-
-.bitb-nav-btns{
-    display:flex;
-    align-items:center;
-    gap:2px;
-    flex-shrink:0;
-}
-
-.bitb-nav-btn{
-    width:32px;
-    height:32px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border:none;
-    border-radius:50%;
-    background:transparent;
-    color:#5f6368;
-    padding:0;
-    cursor:pointer;
-}
-
-.bitb-nav-btn:hover:not(:disabled){
-    background:rgba(0,0,0,0.06);
-}
-
-.bitb-nav-btn--disabled{
-    opacity:0.28;
-    pointer-events:none;
-}
-
-.bitb-omnibox{
-    flex:1;
-    min-width:0;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:#f1f3f4;
-    border-radius:24px;
-    padding:6px 14px 6px 12px;
-    border:1px solid transparent;
-    box-shadow:inset 0 1px 2px rgba(0,0,0,0.04);
-}
-
-.bitb-omnibox:focus-within{
-    background:#fff;
-    border-color:#8ab4f8;
-    box-shadow:0 0 0 1px rgba(26,115,232,0.35);
-}
-
-.bitb-omnibox-icon{
-    flex-shrink:0;
-    display:flex;
-    opacity:0.9;
-}
-
-.bitb-url-display{
-    flex:1;
-    min-width:0;
-    font-size:13px;
-    line-height:1.35;
-    color:#202124;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-}
-
-.bitb-toolbar-end{
-    flex-shrink:0;
-    width:36px;
-    display:flex;
-    justify-content:center;
-}
-
-.bitb-menu-dots{
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-    opacity:0.55;
-}
-
-.bitb-menu-dots span{
-    display:block;
-    width:3px;
-    height:3px;
-    border-radius:50%;
-    background:#5f6368;
-}
-
+/* mrd0x #content */
 .bitb-frame{
-    flex:1;
     width:100%;
-    min-height:0;
+    height:640px;
+    border-bottom-right-radius:7px;
+    border-bottom-left-radius:7px;
     border:none;
-    background:#f8f9fa;
+    display:block;
 }
 
 @media (max-width:900px){
@@ -1087,8 +971,8 @@ button.bitb-dot--red{
     }
 }
 
-/* ── TikTok image modal ── */
-.tiktok-img-modal{
+/* ── TikTok QR modal ── */
+.ttqr-modal{
     position:fixed;
     inset:0;
     z-index:1100;
@@ -1096,73 +980,118 @@ button.bitb-dot--red{
     align-items:center;
     justify-content:center;
 }
-.tiktok-img-modal[hidden]{
-    display:none;
+.ttqr-modal[hidden]{
+    display:none !important;
 }
-.tiktok-img-backdrop{
+
+.ttqr-backdrop{
     position:absolute;
     inset:0;
-    background:rgba(0,0,0,.55);
+    background:rgba(0,0,0,0.72);
     cursor:pointer;
 }
-.tiktok-img-box{
+
+.ttqr-card{
     position:relative;
+    z-index:1;
     background:#fff;
-    border-radius:16px;
-    padding:28px 32px 24px;
-    width:340px;
-    max-width:90vw;
-    box-shadow:0 8px 40px rgba(0,0,0,.18);
+    border-radius:20px;
+    width:400px;
+    max-width:calc(100vw - 32px);
+    padding:0;
+    box-shadow:0 24px 80px rgba(0,0,0,0.32), 0 4px 16px rgba(0,0,0,0.12);
     display:flex;
     flex-direction:column;
-    align-items:center;
-    gap:16px;
-    z-index:1;
+    overflow:hidden;
 }
-.tiktok-img-header{
-    width:100%;
+
+/* Header row */
+.ttqr-header{
     display:flex;
     align-items:center;
     justify-content:space-between;
+    padding:18px 20px 14px;
+    border-bottom:1px solid #f0f0f0;
 }
-.tiktok-img-title{
-    font-size:15px;
-    font-weight:600;
-    color:#1a1a1a;
-}
-.tiktok-img-close{
-    background:none;
-    border:none;
-    cursor:pointer;
-    padding:4px;
-    color:#777;
-    border-radius:4px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    transition:color .15s;
-}
-.tiktok-img-close:hover{ color:#111; }
-.tiktok-img-body{
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:220px;
-    background:#fafafa;
-    border-radius:10px;
-    overflow:hidden;
-}
-.tiktok-qr-img{
-    max-width:100%;
-    max-height:280px;
-    object-fit:contain;
+
+.ttqr-brand-logo{
+    height:22px;
+    width:auto;
     display:block;
 }
-.tiktok-img-hint{
-    font-size:12px;
+
+.ttqr-close{
+    width:32px;
+    height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:none;
+    border:none;
+    border-radius:8px;
     color:#888;
+    cursor:pointer;
+    padding:0;
+    transition:background 0.12s, color 0.12s;
+    flex-shrink:0;
+}
+.ttqr-close:hover{
+    background:#f5f5f5;
+    color:#111;
+}
+
+/* Title block */
+.ttqr-title-wrap{
+    padding:20px 24px 12px;
     text-align:center;
+}
+.ttqr-title{
+    font-size:18px;
+    font-weight:700;
+    color:#000;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+}
+.ttqr-subtitle{
+    font-size:13px;
+    color:#666;
     margin:0;
     line-height:1.5;
+}
+
+/* QR image area — crisp, no blur, fixed square */
+.ttqr-img-wrap{
+    margin:0 24px;
+    background:#fafafa;
+    border:1px solid #ebebeb;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    aspect-ratio:1 / 1;
+    width:calc(100% - 48px);
+}
+.ttqr-img{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    image-rendering:crisp-edges;
+    image-rendering:-webkit-optimize-contrast;
+    image-rendering:pixelated;
+}
+
+/* Footer hint */
+.ttqr-hint{
+    font-size:12px;
+    color:#999;
+    text-align:center;
+    padding:14px 24px 22px;
+    line-height:1.6;
+    margin:0;
+}
+.ttqr-hint strong{
+    color:#555;
+    font-weight:600;
 }

