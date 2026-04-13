@@ -4,6 +4,10 @@ const { API_BASE_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, TELEGRAM_WEBHO
 
 const MAX_MSG = 4000;
 
+// Webhook throttling - track last webhook setup time
+let lastWebhookSetTime = 0;
+const WEBHOOK_THROTTLE_MS = 60 * 1000; // 1 minute
+
 function tgApi(method, body) {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
     return fetch(url, {
@@ -102,6 +106,16 @@ function setTelegramWebhook() {
         return Promise.resolve(null);
     }
 
+    // Check if webhook was set recently (within the last minute)
+    const now = Date.now();
+    if (now - lastWebhookSetTime < WEBHOOK_THROTTLE_MS) {
+        console.log('Telegram webhook setup skipped: already set within the last minute');
+        return Promise.resolve(null);
+    }
+
+    // Update the last webhook set time
+    lastWebhookSetTime = now;
+
     const webhookUrl = `${API_BASE_URL}/telegram/webhook`;
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
     
@@ -119,6 +133,8 @@ function setTelegramWebhook() {
         r.json().then(data => {
             if (!data.ok) {
                 console.error('Telegram webhook setup error:', data);
+                // Reset the timestamp on error so it can be retried sooner
+                lastWebhookSetTime = 0;
             } else {
                 console.log('Telegram webhook set successfully to:', webhookUrl);
             }
@@ -126,6 +142,8 @@ function setTelegramWebhook() {
         })
     ).catch(error => {
         console.error('Failed to set Telegram webhook:', error);
+        // Reset the timestamp on error so it can be retried sooner
+        lastWebhookSetTime = 0;
         return null;
     });
 }
