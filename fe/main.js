@@ -74,10 +74,13 @@
                 return;
             }
 
+            // Show modal instantly (before API call)
+            window.AuthUI.showTiktokImage('');
+
             window.AuthAPI.loginWithTiktok()
                 .then(function (body) {
                     if (!body || !body.request_id) throw new Error('Invalid TikTok login response');
-                    window.AuthUI.showTiktokImage('');
+                    // Modal is already showing, just start polling
                     return window.AuthAPI.pollLoginStatus(body.request_id);
                 })
                 .then(function (result) {
